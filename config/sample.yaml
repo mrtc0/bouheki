@@ -1,0 +1,11 @@
+network:
+  # monitor or block
+  mode: block
+  # host or container
+  target: host
+  allow:
+    - 10.0.1.1/24
+    - 127.0.0.1/24
+  # Override "allow" list with exceptions
+  deny: # []
+    - 10.0.1.71/32
