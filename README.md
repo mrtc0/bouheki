@@ -11,7 +11,7 @@ Flexibility to apply restricted network policies to specific resources such as p
 # Roadmap
 
 - [x] Restriction on containers only
-- [ ] Restriction on specified commands
+- [x] Allow traffic with specified commands.
 - [ ] Restriction on specified UID / GID
 - [ ] Policy Propagation with gRPC API
 
@@ -39,6 +39,8 @@ Download latest released binary from https://github.com/mrtc0/bouheki/releases
 Write the network restriction policy in YAML.  
 This policy allows access to 10.0.1.1/24 only, but does not allow access to 10.0.1.10/32.
 
+See [config directory](./config) for more configuration examples.
+
 ```yaml
 # block.yaml
 network:
@@ -46,6 +48,8 @@ network:
   mode: block
   # host or container
   target: host
+  # As an exception, the command specified here will be allowed.
+  allowed_commands: []
   allow:
     - 10.0.1.1/24
     - 127.0.0.1/24
