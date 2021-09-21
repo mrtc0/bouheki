@@ -32,7 +32,7 @@ Flexibility to apply restricted network policies to specific resources such as p
 
 ## 1. Install
 
-TBD
+Download latest released binary from https://github.com/mrtc0/bouheki/releases
 
 ## 2. Configuration
 
@@ -79,7 +79,7 @@ The log will record the blocked events.
 
 ```shell
 $ sudo ./bouheki --config config/sample.yaml
-INFO[0003] Traffic is trapped in the filter.             Action=block Addr=10.0.1.71 Comm=curl Hostname=sandbox PID=294293 Port=443
+INFO[0003] Traffic is trapped in the filter.             Action=block Addr=10.0.1.10 Comm=curl Hostname=sandbox PID=294293 Port=443
 INFO[0026] Traffic is trapped in the filter.             Action=block Addr=93.184.216.34 Comm=curl Hostname=sandbox PID=294356 Port=443
 INFO[0026] Traffic is trapped in the filter.             Action=block Addr=93.184.216.34 Comm=curl Hostname=sandbox PID=294356 Port=443
 ```
