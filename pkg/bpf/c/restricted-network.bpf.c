@@ -9,6 +9,7 @@ char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
 BPF_RING_BUF(audit_events, AUDIT_EVENTS_RING_SIZE);
 BPF_HASH(b_config, u32, struct bouheki_config, 256);
+BPF_HASH(allowed_commands, struct allowed_command_key, u32, 256);
 
 struct {
 	__uint(type, BPF_MAP_TYPE_LPM_TRIE);
@@ -69,6 +70,9 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     		.addr = inet_addr->sin_addr
 	};
 
+	struct allowed_command_key allowed_command;
+	bpf_get_current_comm(&allowed_command.comm, sizeof(allowed_command.comm));
+
 	int can_access = -EPERM;
 	u32 index = 0;
 
@@ -78,6 +82,10 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 		if (!is_container()) {
 			return 0;
 		}
+	}
+
+	if (bpf_map_lookup_elem(&allowed_commands, &allowed_command)) {
+		return 0;
 	}
 
 	if (bpf_map_lookup_elem(&allowlist, &key)) {

@@ -8,10 +8,11 @@ import (
 
 type Config struct {
 	Network struct {
-		Mode   string   `yaml:"mode"`
-		Target string   `yaml:"target"`
-		Allow  []string `yaml:"allow"`
-		Deny   []string `yaml:"deny"`
+		Mode           string   `yaml:"mode"`
+		Target         string   `yaml:"target"`
+		AllowedCommand []string `yaml:"allowed_command"`
+		Allow          []string `yaml:"allow"`
+		Deny           []string `yaml:"deny"`
 	}
 }
 

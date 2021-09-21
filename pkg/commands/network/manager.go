@@ -52,6 +52,10 @@ func (m *Manager) SetConfig() error {
 	if err != nil {
 		return err
 	}
+	err = m.setAllowedCommandList()
+	if err != nil {
+		return err
+	}
 	err = m.attach()
 	if err != nil {
 		return err
@@ -135,6 +139,22 @@ func (m *Manager) setConfigMap() error {
 	return nil
 }
 
+func (m *Manager) setAllowedCommandList() error {
+	commands, err := m.mod.GetMap("allowed_commands")
+	if err != nil {
+		return err
+	}
+
+	for _, c := range m.config.Network.AllowedCommand {
+		err = commands.Update(byteToKey([]byte(c)), uint8(0))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (m *Manager) setAllowList() error {
 	allowlist, err := m.mod.GetMap("allowlist")
 	if err != nil {
@@ -146,7 +166,7 @@ func (m *Manager) setAllowList() error {
 		if err != nil {
 			return err
 		}
-		err = allowlist.Update(toKey(*allowAddresses), uint8(0))
+		err = allowlist.Update(ipToKey(*allowAddresses), uint8(0))
 		if err != nil {
 			return err
 		}
@@ -166,7 +186,7 @@ func (m *Manager) setDenyList() error {
 		if err != nil {
 			return err
 		}
-		err = denylist.Update(toKey(*denyAddresses), uint8(0))
+		err = denylist.Update(ipToKey(*denyAddresses), uint8(0))
 		if err != nil {
 			return err
 		}
@@ -175,7 +195,7 @@ func (m *Manager) setDenyList() error {
 	return nil
 }
 
-func toKey(n net.IPNet) []byte {
+func ipToKey(n net.IPNet) []byte {
 	prefixLen, _ := n.Mask.Size()
 
 	key := make([]byte, 16)
@@ -183,6 +203,12 @@ func toKey(n net.IPNet) []byte {
 	binary.LittleEndian.PutUint32(key[0:4], uint32(prefixLen))
 	copy(key[4:], n.IP)
 
+	return key
+}
+
+func byteToKey(b []byte) []byte {
+	key := make([]byte, 16)
+	copy(key[0:], b)
 	return key
 }
 
