@@ -1,8 +1,6 @@
 package network
 
 import (
-	"fmt"
-
 	"github.com/mrtc0/bouheki/pkg/bpf"
 	"github.com/mrtc0/bouheki/pkg/config"
 	log "github.com/mrtc0/bouheki/pkg/log"
@@ -32,9 +30,6 @@ func Run(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
-	log.Debug(fmt.Sprintf("Allowed Networks: %v", conf.Network.Allow))
-	log.Debug(fmt.Sprintf("Denied Networks: %v", conf.Network.Deny))
 
 	RunAudit(bytecode, objName, conf)
 

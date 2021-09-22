@@ -149,7 +149,7 @@ func (m *Manager) setAllowedCommandList() error {
 		return err
 	}
 
-	for _, c := range m.config.Network.AllowedCommand {
+	for _, c := range m.config.Network.Command.Allow {
 		err = commands.Update(byteToKey([]byte(c)), uint8(0))
 		if err != nil {
 			return err
@@ -165,7 +165,7 @@ func (m *Manager) setDenyCommandList() error {
 		return err
 	}
 
-	for _, c := range m.config.Network.DenyCommand {
+	for _, c := range m.config.Network.Command.Deny {
 		err = commands.Update(byteToKey([]byte(c)), uint8(0))
 		if err != nil {
 			return err
@@ -181,7 +181,7 @@ func (m *Manager) setAllowList() error {
 		return err
 	}
 
-	for _, s := range m.config.Network.Allow {
+	for _, s := range m.config.Network.CIDR.Allow {
 		allowAddresses, err := parseCIDR(s)
 		if err != nil {
 			return err
@@ -201,7 +201,7 @@ func (m *Manager) setDenyList() error {
 		return err
 	}
 
-	for _, s := range m.config.Network.Deny {
+	for _, s := range m.config.Network.CIDR.Deny {
 		denyAddresses, err := parseCIDR(s)
 		if err != nil {
 			return err
