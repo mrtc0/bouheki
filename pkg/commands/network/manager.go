@@ -44,11 +44,11 @@ func (m *Manager) SetConfig() error {
 	if err != nil {
 		return err
 	}
-	err = m.setAllowList()
+	err = m.setAllowCIDRList()
 	if err != nil {
 		return err
 	}
-	err = m.setDenyList()
+	err = m.setDenyCIDRList()
 	if err != nil {
 		return err
 	}
@@ -175,7 +175,7 @@ func (m *Manager) setDenyCommandList() error {
 	return nil
 }
 
-func (m *Manager) setAllowList() error {
+func (m *Manager) setAllowCIDRList() error {
 	allowlist, err := m.mod.GetMap("allowlist")
 	if err != nil {
 		return err
@@ -195,7 +195,7 @@ func (m *Manager) setAllowList() error {
 	return nil
 }
 
-func (m *Manager) setDenyList() error {
+func (m *Manager) setDenyCIDRList() error {
 	denylist, err := m.mod.GetMap("denylist")
 	if err != nil {
 		return err
