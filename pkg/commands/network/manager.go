@@ -56,6 +56,10 @@ func (m *Manager) SetConfig() error {
 	if err != nil {
 		return err
 	}
+	err = m.setDenyCommandList()
+	if err != nil {
+		return err
+	}
 	err = m.attach()
 	if err != nil {
 		return err
@@ -146,6 +150,22 @@ func (m *Manager) setAllowedCommandList() error {
 	}
 
 	for _, c := range m.config.Network.AllowedCommand {
+		err = commands.Update(byteToKey([]byte(c)), uint8(0))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) setDenyCommandList() error {
+	commands, err := m.mod.GetMap("deny_commands")
+	if err != nil {
+		return err
+	}
+
+	for _, c := range m.config.Network.DenyCommand {
 		err = commands.Update(byteToKey([]byte(c)), uint8(0))
 		if err != nil {
 			return err

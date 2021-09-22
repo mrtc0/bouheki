@@ -10,6 +10,7 @@ type NetworkConfig struct {
 	Mode           string   `yaml:"mode"`
 	Target         string   `yaml:"target"`
 	AllowedCommand []string `yaml:"allowed_command"`
+	DenyCommand    []string `yaml:"deny_command"`
 	Allow          []string `yaml:"allow"`
 	Deny           []string `yaml:"deny"`
 }
@@ -32,6 +33,7 @@ func defaultConfig() *Config {
 			Mode:           "monitor",
 			Target:         "host",
 			AllowedCommand: []string{},
+			DenyCommand:    []string{},
 			Allow:          []string{"0.0.0.0/0"},
 			Deny:           []string{},
 		},

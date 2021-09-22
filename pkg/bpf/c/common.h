@@ -72,6 +72,10 @@ struct allowed_command_key {
 	char comm[TASK_COMM_LEN];
 };
 
+struct deny_command_key {
+	char comm[TASK_COMM_LEN];
+};
+
 static inline struct in_addr src_addr4(const struct socket *sock) {
 	struct in_addr addr;
 	__builtin_memset(&addr, 0, sizeof(addr));
