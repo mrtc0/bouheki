@@ -24,6 +24,10 @@ func Run(ctx *cli.Context) error {
 		return err
 	}
 
+	log.SetFormatter(conf.Log.Format)
+	log.SetOutput(conf.Log.Output)
+	log.SetRotation(conf.Log.Output, conf.Log.MaxSize, conf.Log.MaxAge)
+
 	bytecode, objName, err := loadBytecode(conf.Network.Mode)
 	if err != nil {
 		return err

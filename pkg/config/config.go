@@ -6,13 +6,39 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type NetworkConfig struct {
+	Mode           string   `yaml:"mode"`
+	Target         string   `yaml:"target"`
+	AllowedCommand []string `yaml:"allowed_command"`
+	Allow          []string `yaml:"allow"`
+	Deny           []string `yaml:"deny"`
+}
+
+type LogConfig struct {
+	Format  string `yaml:"format"`
+	Output  string `yaml:"output"`
+	MaxSize int    `yaml:"max_size"`
+	MaxAge  int    `yaml:"max_age"`
+}
+
 type Config struct {
-	Network struct {
-		Mode           string   `yaml:"mode"`
-		Target         string   `yaml:"target"`
-		AllowedCommand []string `yaml:"allowed_command"`
-		Allow          []string `yaml:"allow"`
-		Deny           []string `yaml:"deny"`
+	Network NetworkConfig
+	Log     LogConfig
+}
+
+func defaultConfig() *Config {
+	return &Config{
+		Network: NetworkConfig{
+			Mode:           "monitor",
+			Target:         "host",
+			AllowedCommand: []string{},
+			Allow:          []string{"0.0.0.0/0"},
+			Deny:           []string{},
+		},
+		Log: LogConfig{
+			Format: "json",
+			Output: "stdout",
+		},
 	}
 }
 
@@ -25,7 +51,7 @@ func NewConfig(configPath string) (*Config, error) {
 
 	d := yaml.NewDecoder(file)
 
-	config := &Config{}
+	config := defaultConfig()
 	if err := d.Decode(&config); err != nil {
 		return nil, err
 	}
