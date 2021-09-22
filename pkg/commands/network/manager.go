@@ -60,6 +60,14 @@ func (m *Manager) SetConfig() error {
 	if err != nil {
 		return err
 	}
+	err = m.setAllowUIDList()
+	if err != nil {
+		return err
+	}
+	err = m.setDenyUIDList()
+	if err != nil {
+		return err
+	}
 	err = m.attach()
 	if err != nil {
 		return err
@@ -175,6 +183,36 @@ func (m *Manager) setDenyCommandList() error {
 	return nil
 }
 
+func (m *Manager) setAllowUIDList() error {
+	uids, err := m.mod.GetMap("allowed_uids")
+	if err != nil {
+		return err
+	}
+	for _, uid := range m.config.Network.UID.Allow {
+		err = uids.Update(uintToKey(uid), uint8(0))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) setDenyUIDList() error {
+	uids, err := m.mod.GetMap("deny_uids")
+	if err != nil {
+		return err
+	}
+	for _, uid := range m.config.Network.UID.Deny {
+		err = uids.Update(uintToKey(uid), uint8(0))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (m *Manager) setAllowCIDRList() error {
 	allowlist, err := m.mod.GetMap("allowlist")
 	if err != nil {
@@ -229,6 +267,12 @@ func ipToKey(n net.IPNet) []byte {
 func byteToKey(b []byte) []byte {
 	key := make([]byte, 16)
 	copy(key[0:], b)
+	return key
+}
+
+func uintToKey(i uint) []byte {
+	key := make([]byte, 4)
+	binary.LittleEndian.PutUint32(key[0:4], uint32(i))
 	return key
 }
 

@@ -13,6 +13,9 @@ BPF_HASH(b_config, u32, struct bouheki_config, 256);
 BPF_HASH(allowed_commands, struct allowed_command_key, u32, 256);
 BPF_HASH(deny_commands, struct deny_command_key, u32, 256);
 
+BPF_HASH(allowed_uids, struct allowed_uid_key, u32, 256);
+BPF_HASH(deny_uids, struct deny_uid_key, u32, 256);
+
 struct {
 	__uint(type, BPF_MAP_TYPE_LPM_TRIE);
 	__uint(max_entries, 256);
@@ -74,8 +77,15 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 
 	struct allowed_command_key allowed_command;
 	struct deny_command_key deny_command;
+	struct allowed_uid_key allowed_uid;
+	struct deny_uid_key deny_uid;
+
 	bpf_get_current_comm(&allowed_command.comm, sizeof(allowed_command.comm));
 	bpf_get_current_comm(&deny_command.comm, sizeof(deny_command.comm));
+
+	allowed_uid.uid = (unsigned)(bpf_get_current_uid_gid() & 0xffffffff);
+	deny_uid.uid = (unsigned)(bpf_get_current_uid_gid() & 0xffffffff);
+	// allowed_gid.gid = (unsigned)(bpf_get_current_uid_gid() >> 32)
 
 	int can_access = -EPERM;
 	u32 index = 0;
@@ -96,7 +106,15 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 		can_access = 0;
 	}
 
+	if (bpf_map_lookup_elem(&allowed_uids, &allowed_uid)) {
+		return 0;
+	}
+
 	if (bpf_map_lookup_elem(&deny_commands, &deny_command)) {
+		can_access = -EPERM;
+	}
+
+	if (bpf_map_lookup_elem(&deny_uids, &deny_uid)) {
 		can_access = -EPERM;
 	}
 
