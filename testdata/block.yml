@@ -1,0 +1,10 @@
+network:
+  mode: block
+  target: host
+  cidr:
+    allow:
+      - 0.0.0.0/0
+    deny:
+      - 10.0.1.1/32
+log:
+  format: json
