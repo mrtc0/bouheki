@@ -37,6 +37,11 @@ enum network_op {
 	OP_SENDMSG
 };
 
+enum action {
+	ACTION_MONITOR,
+	ACTION_BLOCK
+};
+
 enum audit_event_type {
 	BLOCKED_IPV4,
 	BLOCKED_IPV6
@@ -56,6 +61,7 @@ struct audit_event_blocked_ipv4 {
 	struct in_addr dst;
 	u16 dport;
 	u8 operation;
+	u8 action;
 };
 
 struct bouheki_config {

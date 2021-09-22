@@ -32,7 +32,7 @@ struct {
 	__uint(map_flags, BPF_F_NO_PREALLOC);
 } allowlist SEC(".maps");
 
-static inline void report_ip4_block(void *ctx, u64 cg, enum network_op op, struct socket *sock, const struct sockaddr_in *daddr) {
+static inline void report_ip4_block(void *ctx, u64 cg, enum action action, enum network_op op, struct socket *sock, const struct sockaddr_in *daddr) {
 	struct audit_event_blocked_ipv4 ev;
 
 	struct task_struct *current_task;
@@ -55,6 +55,7 @@ static inline void report_ip4_block(void *ctx, u64 cg, enum network_op op, struc
 	ev.src = src_addr4(sock);
 	ev.dst = BPF_CORE_READ(daddr, sin_addr);
 	ev.operation = (u8)op;
+	ev.action = (u8)action;
 
 	bpf_ringbuf_output(&audit_events, &ev, sizeof(ev), 0);
 }
@@ -122,11 +123,12 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 		can_access = -EPERM;
 	}
 
-	if (can_access != 0) {
-		report_ip4_block((void*) ctx, cg, OP_CONNECT, sock, inet_addr);
+	if (can_access != 0 && c && c->mode == MODE_BLOCK) {
+		report_ip4_block((void*) ctx, cg, ACTION_BLOCK, OP_CONNECT, sock, inet_addr);
 	}
 
 	if (c && c->mode == MODE_MONITOR) {
+		report_ip4_block((void*) ctx, cg, ACTION_MONITOR, OP_CONNECT, sock, inet_addr);
 		return 0;
 	}
 
