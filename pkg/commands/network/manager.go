@@ -20,18 +20,21 @@ const (
 	CONFIG_BPF_TABLE = "b_config"
 
 	/*
-		+---------------+---------------+
-		| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-		+---------------+---------------+
-		|      MODE     |     TARGET    |
-		+---------------+---------------+
+		+---------------+---------------+---+----+
+		| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+		+---------------+---------------+---+----+
+		|      MODE     |     TARGET    | Has Allow Command | Has Allow UID
+		+---------------+---------------+---+----+
 	*/
-	MAP_SIZE = 8
+	MAP_SIZE = 16
 
 	MAP_MODE_START   = 0
 	MAP_MODE_END     = 4
 	MAP_TARGET_START = 4
 	MAP_TARGET_END   = 8
+
+	MAP_HAS_ALLOW_COMMAND = 9
+	MAP_HAS_ALLOW_UID     = 10
 )
 
 type Manager struct {
@@ -41,36 +44,34 @@ type Manager struct {
 }
 
 func (m *Manager) SetConfig() error {
-	err := m.setConfigMap()
-	if err != nil {
+	if err := m.setConfigMap(); err != nil {
 		return err
 	}
-	err = m.setAllowCIDRList()
-	if err != nil {
+	if err := m.setAllowCIDRList(); err != nil {
 		return err
 	}
-	err = m.setDenyCIDRList()
-	if err != nil {
+	if err := m.setDenyCIDRList(); err != nil {
 		return err
 	}
-	err = m.setAllowedCommandList()
-	if err != nil {
+	if err := m.setAllowedCommandList(); err != nil {
 		return err
 	}
-	err = m.setDenyCommandList()
-	if err != nil {
+	if err := m.setDenyCommandList(); err != nil {
 		return err
 	}
-	err = m.setAllowUIDList()
-	if err != nil {
+	if err := m.setAllowUIDList(); err != nil {
 		return err
 	}
-	err = m.setDenyUIDList()
-	if err != nil {
+	if err := m.setDenyUIDList(); err != nil {
 		return err
 	}
-	err = m.attach()
-	if err != nil {
+	if err := m.setAllowGIDList(); err != nil {
+		return err
+	}
+	if err := m.setDenyGIDList(); err != nil {
+		return err
+	}
+	if err := m.attach(); err != nil {
 		return err
 	}
 	return nil
@@ -113,46 +114,45 @@ func (m *Manager) attach() error {
 	return nil
 }
 
-func (m *Manager) setMode(table *libbpfgo.BPFMap, key []byte) error {
+func (m *Manager) setMode(table *libbpfgo.BPFMap, key []byte) []byte {
 	if m.config.IsRestricted() {
 		binary.LittleEndian.PutUint32(key[MAP_MODE_START:MAP_MODE_END], MODE_BLOCK)
 	} else {
 		binary.LittleEndian.PutUint32(key[MAP_MODE_START:MAP_MODE_END], MODE_MONITOR)
 	}
 
-	err := table.Update(uint8(0), key)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return key
 }
 
-func (m *Manager) setTarget(table *libbpfgo.BPFMap, key []byte) error {
+func (m *Manager) setTarget(table *libbpfgo.BPFMap, key []byte) []byte {
 	if m.config.IsOnlyContainer() {
 		binary.LittleEndian.PutUint32(key[MAP_TARGET_START:MAP_TARGET_END], TAREGT_CONTAINER)
 	} else {
 		binary.LittleEndian.PutUint32(key[MAP_TARGET_START:MAP_TARGET_END], TARGET_HOST)
 	}
 
-	err := table.Update(uint8(0), key)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return key
 }
 
 func (m *Manager) setConfigMap() error {
-	config, err := m.mod.GetMap(CONFIG_BPF_TABLE)
+	configMap, err := m.mod.GetMap(CONFIG_BPF_TABLE)
 	if err != nil {
 		return err
 	}
 
 	key := make([]byte, MAP_SIZE)
 
-	m.setMode(config, key)
-	m.setTarget(config, key)
+	key = m.setMode(configMap, key)
+	key = m.setTarget(configMap, key)
+
+	binary.LittleEndian.PutUint32(key[8:12], uint32(len(m.config.Network.Command.Allow)))
+	binary.LittleEndian.PutUint32(key[12:16], uint32(len(m.config.Network.UID.Allow)))
+
+	err = configMap.Update(uint8(0), key)
+
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -211,6 +211,36 @@ func (m *Manager) setDenyUIDList() error {
 	}
 	for _, uid := range m.config.Network.UID.Deny {
 		err = uids.Update(uintToKey(uid), uint8(0))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) setAllowGIDList() error {
+	gids, err := m.mod.GetMap("allowed_gids")
+	if err != nil {
+		return err
+	}
+	for _, gid := range m.config.Network.GID.Allow {
+		err = gids.Update(uintToKey(gid), uint8(0))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) setDenyGIDList() error {
+	gids, err := m.mod.GetMap("deny_uids")
+	if err != nil {
+		return err
+	}
+	for _, gid := range m.config.Network.GID.Deny {
+		err = gids.Update(uintToKey(gid), uint8(0))
 		if err != nil {
 			return err
 		}

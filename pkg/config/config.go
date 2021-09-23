@@ -12,6 +12,7 @@ type NetworkConfig struct {
 	Command CommandConfig `yaml:"command"`
 	CIDR    CIDRConfig    `yaml:"cidr"`
 	UID     UIDConfig     `yaml:"uid"`
+	GID     GIDConfig     `yaml:"gid"`
 }
 
 type CIDRConfig struct {
@@ -25,6 +26,11 @@ type CommandConfig struct {
 }
 
 type UIDConfig struct {
+	Allow []uint `yaml:"allow"`
+	Deny  []uint `yaml:"deny"`
+}
+
+type GIDConfig struct {
 	Allow []uint `yaml:"allow"`
 	Deny  []uint `yaml:"deny"`
 }
@@ -49,6 +55,7 @@ func defaultConfig() *Config {
 			Command: CommandConfig{Allow: []string{}, Deny: []string{}},
 			CIDR:    CIDRConfig{Allow: []string{"0.0.0.0/0"}, Deny: []string{}},
 			UID:     UIDConfig{Allow: []uint{}, Deny: []uint{}},
+			GID:     GIDConfig{Allow: []uint{}, Deny: []uint{}},
 		},
 		Log: LogConfig{
 			Format: "json",

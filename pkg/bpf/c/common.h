@@ -4,6 +4,8 @@
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_tracing.h>
 
+#define ALLOW_ACCESS 0
+
 #define AF_INET  2
 #define AUDIT_EVENTS_RING_SIZE  (4*4096)
 #define TASK_COMM_LEN 16
@@ -67,6 +69,8 @@ struct audit_event_blocked_ipv4 {
 struct bouheki_config {
 	enum mode mode;
 	enum target target;
+	int has_allow_command;
+	int has_allow_uid;
 };
 
 struct ip4_trie_key {
@@ -88,6 +92,14 @@ struct allowed_uid_key {
 
 struct deny_uid_key {
 	u32 uid;
+};
+
+struct allowed_gid_key {
+	u32 gid;
+};
+
+struct deny_gid_key {
+	u32 gid;
 };
 
 static inline struct in_addr src_addr4(const struct socket *sock) {

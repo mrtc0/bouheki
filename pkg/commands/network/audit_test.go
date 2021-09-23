@@ -57,7 +57,7 @@ func TestAuditMonitorMode(t *testing.T) {
 	auditManager.manager.mod.Close()
 }
 
-func TestCommunicateWithRestrictedCommand(t *testing.T) {
+func TestCanCommunicateWithRestrictedCommand(t *testing.T) {
 	fixture := "../../../testdata/command_allow.yml"
 	config := loadFixtureConfig(fixture)
 	mgr := createManager(config)
@@ -82,7 +82,10 @@ func TestRestrictedCommand(t *testing.T) {
 	err := exec.Command("curl", "http://93.184.216.34").Run()
 	assert.NotNil(t, err)
 
-	err = exec.Command("wget", "http://example.com", "-O", "/dev/null").Run()
+	cmd := exec.Command("wget", "-t", "1", "http://93.184.216.34/index.html", "-O", "/dev/null")
+	err = cmd.Run()
+
+	fmt.Printf("%#v %#v", cmd.Stdout, err)
 	assert.Nil(t, err)
 
 	mgr.mod.Close()
