@@ -20,21 +20,21 @@ const (
 	CONFIG_BPF_TABLE = "b_config"
 
 	/*
-		+---------------+---------------+---+----+
-		| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
-		+---------------+---------------+---+----+
-		|      MODE     |     TARGET    | Has Allow Command | Has Allow UID
-		+---------------+---------------+---+----+
+		+---------------+---------------+-------------------+-------------------+
+		| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12  | 13 | 14 | 15 | 16 |
+		+---------------+---------------+-------------------+
+		|      MODE     |     TARGET    | Allow Command Size|  Allow UID Size   | Allow GID Size |
+		+---------------+---------------+-------+
 	*/
-	MAP_SIZE = 16
+	MAP_SIZE = 20
 
-	MAP_MODE_START   = 0
-	MAP_MODE_END     = 4
-	MAP_TARGET_START = 4
-	MAP_TARGET_END   = 8
-
-	MAP_HAS_ALLOW_COMMAND = 9
-	MAP_HAS_ALLOW_UID     = 10
+	MAP_MODE_START          = 0
+	MAP_MODE_END            = 4
+	MAP_TARGET_START        = 4
+	MAP_TARGET_END          = 8
+	MAP_ALLOW_COMMAND_INDEX = 8
+	MAP_ALLOW_UID_INDEX     = 12
+	MAP_ALLOW_GID_INDEX     = 16
 )
 
 type Manager struct {
@@ -145,8 +145,9 @@ func (m *Manager) setConfigMap() error {
 	key = m.setMode(configMap, key)
 	key = m.setTarget(configMap, key)
 
-	binary.LittleEndian.PutUint32(key[8:12], uint32(len(m.config.Network.Command.Allow)))
-	binary.LittleEndian.PutUint32(key[12:16], uint32(len(m.config.Network.UID.Allow)))
+	binary.LittleEndian.PutUint32(key[MAP_ALLOW_COMMAND_INDEX:MAP_ALLOW_COMMAND_INDEX+4], uint32(len(m.config.Network.Command.Allow)))
+	binary.LittleEndian.PutUint32(key[MAP_ALLOW_UID_INDEX:MAP_ALLOW_UID_INDEX+4], uint32(len(m.config.Network.UID.Allow)))
+	binary.LittleEndian.PutUint32(key[MAP_ALLOW_GID_INDEX:MAP_ALLOW_GID_INDEX+4], uint32(len(m.config.Network.GID.Allow)))
 
 	err = configMap.Update(uint8(0), key)
 

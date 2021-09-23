@@ -1,0 +1,13 @@
+network:
+  mode: block
+  target: host
+  cidr:
+    allow:
+      - 0.0.0.0/0
+    deny:
+      - 93.184.216.34/32
+  gid:
+    allow:
+      - 1000
+log:
+  format: json

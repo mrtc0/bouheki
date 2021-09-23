@@ -69,6 +69,7 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 	int allow_connect = -EPERM;
 	int allow_command = -EPERM;
 	int allow_uid = -EPERM;
+	int allow_gid = -EPERM;
 
 	// TODO: support IPv6
 	if (address->sa_family != AF_INET)
@@ -102,8 +103,10 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 
 	struct bouheki_config *c = (struct bouheki_config *)bpf_map_lookup_elem(&b_config, &index);
 
+  // Redundant by BPF constraints...
 	int has_allow_command = 0;
 	int has_allow_uid = 0;
+	int has_allow_gid = 0;
 
 	if (c && c->has_allow_command) {
 		has_allow_command = c->has_allow_command;
@@ -127,6 +130,10 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 		allow_uid = 0;
 	}
 
+	if (bpf_map_lookup_elem(&allowed_gids, &allowed_gid) || has_allow_gid == 0) {
+		allow_gid = 0;
+	}
+
 	if (bpf_map_lookup_elem(&allowed_commands, &allowed_command) || has_allow_command == 0) {
 		allow_command = 0;
 	}
@@ -137,6 +144,10 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 
 	if (bpf_map_lookup_elem(&deny_uids, &deny_uid)) {
 		allow_uid = -EPERM;
+	}
+
+	if (bpf_map_lookup_elem(&deny_gids, &deny_gid)) {
+		allow_gid = -EPERM;
 	}
 
 	if (bpf_map_lookup_elem(&denylist, &key)) {
@@ -151,8 +162,12 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 		allow_connect = 0;
 	}
 
+	if (bpf_map_lookup_elem(&denylist, &key) && bpf_map_lookup_elem(&allowed_gids, &allowed_gid)) {
+		allow_connect = 0;
+	}
+
 	int can_access = -EPERM;
-	if (allow_connect == 0 && allow_uid == 0 && allow_command == 0) {
+	if (allow_connect == 0 && allow_uid == 0 && allow_gid == 0 && allow_command == 0) {
 		can_access = 0;
 	}
 
