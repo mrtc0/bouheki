@@ -155,6 +155,10 @@ func hasBPFLSM() error {
 	return fmt.Errorf("BPF LSM is not enabled. Build the kernel enabled in CONFIG_LSM or add it to the boot parameters")
 }
 
+func AmIRootUser() bool {
+	return os.Geteuid() == 0
+}
+
 func IsCompatible() error {
 	if !isLinux() {
 		return errors.New("required to run on Linux")

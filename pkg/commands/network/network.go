@@ -1,8 +1,11 @@
 package network
 
 import (
+	"errors"
+
 	"github.com/mrtc0/bouheki/pkg/config"
 	log "github.com/mrtc0/bouheki/pkg/log"
+	"github.com/mrtc0/bouheki/pkg/utils"
 	"github.com/urfave/cli/v2"
 )
 
@@ -11,6 +14,10 @@ func Run(ctx *cli.Context) error {
 	conf, err := config.NewConfig(path)
 	if err != nil {
 		return err
+	}
+
+	if !utils.AmIRootUser() {
+		return errors.New("Must be run as root")
 	}
 
 	log.SetFormatter(conf.Log.Format)
