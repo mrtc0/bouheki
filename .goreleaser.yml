@@ -1,0 +1,30 @@
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+builds:
+  - env:
+      - CGO_ENABLED=1
+      - CGO_LDFLAGS=-Wl,-Bstatic -lbpf -Wl,-Bdynamic
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -w -s -X main.version={{.Version}}
+    main: ./cmd/bouheki
+    binary: bouheki
+archives:
+  - replacements:
+      linux: Linux
+      amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
