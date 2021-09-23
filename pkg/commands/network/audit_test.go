@@ -16,48 +16,98 @@ const (
 	ACTION_BLOCKED = "BLOCKED"
 )
 
-type auditResult struct {
-	header eventHeader
-	body   eventBlockedIPv4
-	cmd    *exec.Cmd
-	err    error
+type TestAuditManager struct {
+	manager Manager
+	cmd     *exec.Cmd
 }
 
 func TestAuditBlockMode(t *testing.T) {
 	fixture := "../../../testdata/block.yml"
-	result := runAuditWithOnce(fixture, "curl", "https://10.0.1.1")
+	eventsChannel := make(chan []byte)
+	auditManager := runAuditWithOnce(fixture, []string{"curl", "http://93.184.216.34"}, eventsChannel)
+	eventBytes := <-eventsChannel
+	header, body, err := parseEvent(eventBytes)
 
-	assert.Nil(t, result.err)
-	assert.Equal(t, result.body.ActionResult(), ACTION_BLOCKED)
-	assert.Equal(t, int(result.header.PID), result.cmd.Process.Pid)
-	assert.Equal(t, byte2IPv4(result.body.DstIP), "10.0.1.1")
+	assert.Nil(t, err)
+	assert.Equal(t, ACTION_BLOCKED, body.ActionResult())
+	assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+	assert.Equal(t, "93.184.216.34", byte2IPv4(body.DstIP))
+
+	err = exec.Command("curl", "https://google.com").Run()
+	assert.Nil(t, err)
+
+	err = exec.Command("curl", "http://93.184.216.34").Run()
+	assert.NotNil(t, err)
+
+	auditManager.manager.mod.Close()
 }
 
 func TestAuditMonitorMode(t *testing.T) {
 	fixture := "../../../testdata/monitor.yml"
-	result := runAuditWithOnce(fixture, "curl", "https://10.0.1.1")
+	eventsChannel := make(chan []byte)
+	auditManager := runAuditWithOnce(fixture, []string{"curl", "http://93.184.216.34"}, eventsChannel)
+	eventBytes := <-eventsChannel
+	header, body, err := parseEvent(eventBytes)
 
-	assert.Nil(t, result.err)
-	assert.Equal(t, result.body.ActionResult(), ACTION_MONITOR)
-	assert.Equal(t, int(result.header.PID), result.cmd.Process.Pid)
-	assert.Equal(t, byte2IPv4(result.body.DstIP), "10.0.1.1")
+	assert.Nil(t, err)
+	assert.Equal(t, ACTION_MONITOR, body.ActionResult())
+	assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+	assert.Equal(t, "93.184.216.34", byte2IPv4(body.DstIP))
+
+	auditManager.manager.mod.Close()
 }
 
-func TestAuditContainer(t *testing.T) {
+func TestCommunicateWithRestrictedCommand(t *testing.T) {
+	fixture := "../../../testdata/command_allow.yml"
+	config := loadFixtureConfig(fixture)
+	mgr := createManager(config)
+
+	eventsChannel := make(chan []byte)
+	mgr.Start(eventsChannel)
+
+	err := exec.Command("curl", "http://93.184.216.34").Run()
+	assert.Nil(t, err)
+
+	mgr.mod.Close()
+}
+
+func TestRestrictedCommand(t *testing.T) {
+	fixture := "../../../testdata/command_deny.yml"
+	config := loadFixtureConfig(fixture)
+	mgr := createManager(config)
+
+	eventsChannel := make(chan []byte)
+	mgr.Start(eventsChannel)
+
+	err := exec.Command("curl", "http://93.184.216.34").Run()
+	assert.NotNil(t, err)
+
+	err = exec.Command("wget", "http://example.com", "-O", "/dev/null").Run()
+	assert.Nil(t, err)
+
+	mgr.mod.Close()
+}
+
+func TestAuditContainerBlock(t *testing.T) {
 	fixture := "../../../testdata/container.yml"
-	args := []string{"-c", "/usr/bin/docker run --rm curlimages/curl@sha256:347bf0095334e390673f532456a60bea7070ef63f2ca02168fee46b867a51aa8 https://10.0.1.1"}
-	result := runAuditWithOnce(fixture, "/bin/bash", args...)
+	eventsChannel := make(chan []byte)
+	commands := []string{"/bin/bash", "-c", "/usr/bin/docker run --rm curlimages/curl@sha256:347bf0095334e390673f532456a60bea7070ef63f2ca02168fee46b867a51aa8 http://93.184.216.34"}
+	auditManager := runAuditWithOnce(fixture, commands, eventsChannel)
+	eventBytes := <-eventsChannel
+	header, body, err := parseEvent(eventBytes)
 
 	hostname, err := os.Hostname()
 	if err != nil {
 		t.Errorf("can not get hostname: %s", err)
 	}
 
-	assert.Nil(t, result.err)
-	assert.Equal(t, result.body.ActionResult(), ACTION_BLOCKED)
-	assert.Equal(t, byte2IPv4(result.body.DstIP), "10.0.1.1")
-	assert.Equal(t, len(nodename2string(result.header.Nodename)), 12)
-	assert.NotEqual(t, nodename2string(result.header.Nodename), hostname)
+	assert.Nil(t, err)
+	assert.Equal(t, body.ActionResult(), ACTION_BLOCKED)
+	assert.Equal(t, byte2IPv4(body.DstIP), "93.184.216.34")
+	assert.Equal(t, len(nodename2string(header.Nodename)), 12)
+	assert.NotEqual(t, nodename2string(header.Nodename), hostname)
+
+	auditManager.manager.mod.Close()
 }
 
 func TestAuditContainerDoNotCaptureHostEvents(t *testing.T) {
@@ -71,7 +121,7 @@ func TestAuditContainerDoNotCaptureHostEvents(t *testing.T) {
 
 	mgr.Start(eventsChannel)
 
-	cmd := exec.Command("curl", "https://10.0.1.1")
+	cmd := exec.Command("curl", "http://93.184.216.34")
 	err := cmd.Start()
 
 	if err != nil {
@@ -94,16 +144,17 @@ func TestAuditContainerDoNotCaptureHostEvents(t *testing.T) {
 	case <-done:
 		t.Fatal("Got host events. Expect capture only container's event.")
 	}
+
+	mgr.mod.Close()
 }
 
-func runAuditWithOnce(configPath, execCmd string, execArgs ...string) auditResult {
+func runAuditWithOnce(configPath string, execCmd []string, eventsChannel chan []byte) TestAuditManager {
 	config := loadFixtureConfig(configPath)
 	mgr := createManager(config)
 
-	eventsChannel := make(chan []byte)
 	mgr.Start(eventsChannel)
 
-	cmd := exec.Command(execCmd, execArgs...)
+	cmd := exec.Command(execCmd[0], execCmd[1:]...)
 	err := cmd.Start()
 
 	if err != nil {
@@ -112,13 +163,9 @@ func runAuditWithOnce(configPath, execCmd string, execArgs ...string) auditResul
 
 	cmd.Wait()
 
-	eventBytes := <-eventsChannel
-	header, body, err := parseEvent(eventBytes)
-	return auditResult{
-		header: header,
-		body:   body,
-		cmd:    cmd,
-		err:    err,
+	return TestAuditManager{
+		manager: mgr,
+		cmd:     cmd,
 	}
 }
 

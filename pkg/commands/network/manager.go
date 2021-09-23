@@ -37,6 +37,7 @@ const (
 type Manager struct {
 	mod    *libbpfgo.Module
 	config *config.Config
+	rb     *libbpfgo.RingBuffer
 }
 
 func (m *Manager) SetConfig() error {
@@ -83,8 +84,13 @@ func (m *Manager) Start(eventsChannel chan []byte) error {
 	}
 
 	rb.Start()
+	m.rb = rb
 
 	return nil
+}
+
+func (m *Manager) Close() {
+	m.rb.Close()
 }
 
 func (m *Manager) attach() error {

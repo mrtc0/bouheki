@@ -5,6 +5,6 @@ network:
     allow:
       - 0.0.0.0/0
     deny:
-      - 10.0.1.1/32
+      - 93.184.216.34/32
 log:
   format: json
