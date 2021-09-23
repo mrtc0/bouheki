@@ -1,11 +1,44 @@
 network:
-  # monitor or block
-  mode: block
-  # host or container
-  target: host
-  allow:
-    - 10.0.1.1/24
-    - 127.0.0.1/24
-  # Override "allow" list with exceptions
-  deny: # []
-    - 10.0.1.71/32
+  # Block or monitor the network.
+  # If block is specified, communication that matches the policy will be blocked.
+  mode: block # monitor or block. Default: monitor
+  # Restriction to the whole host or to a container
+  target: host # host or container. Default: host
+  cidr:
+    allow:
+      - 0.0.0.0/0
+      # - 10.0.1.1/24
+      # - 127.0.0.1/24
+    # Override "allow" list with exceptions. Default: []
+    deny: # []
+      - 10.0.1.71/32
+  # Restrictions by command name (optional).
+  command:
+    # Default: empty. All command will be allowed.
+    allow: []
+    # - curl
+    # Default: empty. All command will be allowed.
+    deny: []
+    #  - wget
+    #  - nc
+  # Restrictions by UID (optional).
+  uid:
+    allow:
+      - 0 # Default []
+    deny:
+      - 1000 # Default []
+  # Restrictions by GID (optional).
+  gid:
+    allow: []
+      # - 0
+    deny: []
+      # 1000
+log:
+  # Log format(json or text). Default: json
+  format: json
+  # Specified log file location. Default: stdout
+  # output: /var/log/bouheki.log.json
+  # Maximum size to rotate (MB)
+  # max_size: 100
+  # Period for which logs are kept
+  # max_age: 365

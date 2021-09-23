@@ -3,17 +3,10 @@
 **bouheki** is a KSRI implementation using LSM Hook by eBPF. 
 Flexibility to apply restricted network policies to specific resources such as processes and containers.
 
-# Network Restriction
+# Features and Network Restrictions
 
 * While firewalls such as iptables apply to the entire machine, bouheki can be restricted on a per-container or per-process basis.
 * bouheki does not restrict ingress, only egress.
-
-# Roadmap
-
-- [x] Restriction on containers only
-- [x] Allow traffic with specified commands.
-- [ ] Restriction on specified UID / GID
-- [ ] Policy Propagation with gRPC API
 
 # Getting Started
 
@@ -42,20 +35,49 @@ This policy allows access to 10.0.1.1/24 only, but does not allow access to 10.0
 See [config directory](./config) for more configuration examples.
 
 ```yaml
-# block.yaml
+# block.yml
 network:
-  # monitor or block
-  mode: block
-  # host or container
-  target: host
-  # As an exception, the command specified here will be allowed.
-  allowed_commands: []
-  allow:
-    - 10.0.1.1/24
-    - 127.0.0.1/24
-  # Override "allow" list with exceptions
-  deny: # []
-    - 10.0.1.10/32
+  # Block or monitor the network.
+  # If block is specified, communication that matches the policy will be blocked.
+  mode: block # monitor or block. Default: monitor
+  # Restriction to the whole host or to a container
+  # If a container is specified, only the container's communication will be restricted. This is determined by the value of namespace
+  target: host # host or container. Default: host
+  cidr:
+    allow:
+      - 10.0.1.1/24
+      # - 127.0.0.1/24
+    # Override "allow" list with exceptions. Default: []
+    deny: # []
+      - 10.0.1.10/32
+  # Restrictions by command name (optional).
+  command:
+    # Default: empty. All command will be allowed.
+    allow: []
+    # - curl
+    # Default: empty. All command will be allowed.
+    deny: []
+    #  - wget
+    #  - nc
+  # Restrictions by UID (optional).
+  uid:
+    allow: []
+    deny: []
+  # Restrictions by GID (optional).
+  gid:
+    allow: []
+      # - 0
+    deny: []
+      # 1000
+log:
+  # Log format(json or text). Default: json
+  format: json
+  # Specified log file location. Default: stdout
+  # output: /var/log/bouheki.log.json
+  # Maximum size to rotate (MB)
+  # max_size: 100
+  # Period for which logs are kept
+  # max_age: 365
 ```
 
 Run with the policy.
@@ -82,9 +104,28 @@ curl: (7) Couldn't connect to server
 The log will record the blocked events.
 
 ```shell
-INFO[0003] Traffic is trapped in the filter.             Action=block Addr=10.0.1.10 Comm=curl Hostname=sandbox PID=294293 Port=443
-INFO[0026] Traffic is trapped in the filter.             Action=block Addr=93.184.216.34 Comm=curl Hostname=sandbox PID=294356 Port=443
-INFO[0026] Traffic is trapped in the filter.             Action=block Addr=93.184.216.34 Comm=curl Hostname=sandbox PID=294356 Port=443
+{
+  "Action": "BLOCKED",
+  "Addr": "10.0.1.71",
+  "Comm": "curl",
+  "Hostname": "sandbox",
+  "PID": 790791,
+  "Port": 443,
+  "level": "info",
+  "msg": "Traffic is trapped in the filter.",
+  "time": "2021-09-23T12:47:55Z"
+}
+{
+  "Action": "BLOCKED",
+  "Addr": "93.184.216.34",
+  "Comm": "curl",
+  "Hostname": "sandbox",
+  "PID": 790823,
+  "Port": 443,
+  "level": "info",
+  "msg": "Traffic is trapped in the filter.",
+  "time": "2021-09-23T12:49:29Z"
+}
 ```
 
 # Development
