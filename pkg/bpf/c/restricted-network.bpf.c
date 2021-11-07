@@ -66,6 +66,10 @@ static inline void report_ip4_block(void *ctx, u64 cg, enum action action, enum 
 	bpf_ringbuf_output(&audit_events, &ev, sizeof(ev), 0);
 }
 
+static inline bool is_destination_port_zero(struct sockaddr_in *inet_addr) {
+	return __builtin_bswap16(inet_addr->sin_port) == 0;
+}
+
 // TODO: lsm/send_msg
 SEC("lsm/socket_connect")
 int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int addrlen)
@@ -82,6 +86,10 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 	u64 cg = bpf_get_current_cgroup_id();
 
 	struct sockaddr_in *inet_addr = (struct sockaddr_in *)address;
+
+	if (is_destination_port_zero(inet_addr)) {
+		return 0;
+	}
 
 	struct ip4_trie_key key = {
 			.prefixlen = 32,
