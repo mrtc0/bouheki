@@ -28,11 +28,12 @@ type eventHeader struct {
 }
 
 type eventBlockedIPv4 struct {
-	SrcIP   [SRCIP_LEN]byte
-	DstIP   [DSTIP_LEN]byte
-	DstPort uint16
-	Op      uint8
-	Action  uint8
+	SrcIP    [SRCIP_LEN]byte
+	DstIP    [DSTIP_LEN]byte
+	DstPort  uint16
+	Op       uint8
+	Action   uint8
+	SockType uint8
 }
 
 func (e *eventBlockedIPv4) ActionResult() string {
@@ -108,6 +109,7 @@ func RunAudit(conf *config.Config) {
 			"Comm":     comm2string(header.Command),
 			"Addr":     byte2IPv4(body.DstIP),
 			"Port":     body.DstPort,
+			"Protocol": sockTypeToProtocolName(body.SockType),
 		}).Info("Traffic is trapped in the filter.")
 	}
 }

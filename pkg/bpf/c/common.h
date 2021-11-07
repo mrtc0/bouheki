@@ -64,6 +64,7 @@ struct audit_event_blocked_ipv4 {
 	u16 dport;
 	u8 operation;
 	u8 action;
+	u8 sock_type;
 };
 
 struct bouheki_config {

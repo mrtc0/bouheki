@@ -32,3 +32,15 @@ func nodename2string(bytes [65]byte) string {
 	}
 	return s
 }
+
+func sockTypeToProtocolName(sockType uint8) string {
+	// https://elixir.bootlin.com/linux/latest/source/include/linux/net.h#L61
+	switch sockType {
+	case 1:
+		return "TCP"
+	case 2:
+		return "UDP"
+	default:
+		return "UNKNOWN"
+	}
+}

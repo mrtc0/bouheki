@@ -62,6 +62,7 @@ static inline void report_ip4_block(void *ctx, u64 cg, enum action action, enum 
 	ev.dst = BPF_CORE_READ(daddr, sin_addr);
 	ev.operation = (u8)op;
 	ev.action = (u8)action;
+	ev.sock_type = (u8)sock->type;
 
 	bpf_ringbuf_output(&audit_events, &ev, sizeof(ev), 0);
 }
