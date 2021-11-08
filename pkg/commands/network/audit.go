@@ -19,12 +19,13 @@ const SRCIP_LEN = 4
 const DSTIP_LEN = 4
 
 type eventHeader struct {
-	CGroupID  uint64
-	PID       uint32
-	EventType int32
-	Nodename  [NEW_UTS_LEN + 1]byte
-	Command   [TASK_COMM_LEN]byte
-	_         [PADDING_LEN]byte
+	CGroupID      uint64
+	PID           uint32
+	EventType     int32
+	Nodename      [NEW_UTS_LEN + 1]byte
+	Command       [TASK_COMM_LEN]byte
+	ParentCommand [TASK_COMM_LEN]byte
+	_             [PADDING_LEN]byte
 }
 
 type eventBlockedIPv4 struct {
@@ -103,13 +104,14 @@ func RunAudit(conf *config.Config) {
 		}
 
 		log.WithFields(logrus.Fields{
-			"Action":   body.ActionResult(),
-			"Hostname": nodename2string(header.Nodename),
-			"PID":      header.PID,
-			"Comm":     comm2string(header.Command),
-			"Addr":     byte2IPv4(body.DstIP),
-			"Port":     body.DstPort,
-			"Protocol": sockTypeToProtocolName(body.SockType),
+			"Action":     body.ActionResult(),
+			"Hostname":   nodename2string(header.Nodename),
+			"PID":        header.PID,
+			"Comm":       comm2string(header.Command),
+			"ParentComm": comm2string(header.ParentCommand),
+			"Addr":       byte2IPv4(body.DstIP),
+			"Port":       body.DstPort,
+			"Protocol":   sockTypeToProtocolName(body.SockType),
 		}).Info("Traffic is trapped in the filter.")
 	}
 }

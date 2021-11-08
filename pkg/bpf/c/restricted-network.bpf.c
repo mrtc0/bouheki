@@ -57,6 +57,9 @@ static inline void report_ip4_block(void *ctx, u64 cg, enum action action, enum 
 	ev.hdr.type = BLOCKED_IPV4;
 	bpf_get_current_comm(&ev.hdr.task, sizeof(ev.hdr.task));
 
+	struct task_struct *parent_task = BPF_CORE_READ(current_task, real_parent);
+	bpf_probe_read_kernel_str(&ev.hdr.parent_task, sizeof(ev.hdr.parent_task), &parent_task->comm);
+
 	ev.dport = __builtin_bswap16(daddr->sin_port);
 	ev.src = src_addr4(sock);
 	ev.dst = BPF_CORE_READ(daddr, sin_addr);

@@ -55,6 +55,7 @@ struct audit_event_header {
 	enum audit_event_type type;
 	char nodename[NEW_UTS_LEN + 1];
 	char task[TASK_COMM_LEN];
+	char parent_task[TASK_COMM_LEN];
 };
 
 struct audit_event_blocked_ipv4 {
