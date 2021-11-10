@@ -23,5 +23,10 @@ vmlinux:
 build: bpf-restricted-network
 	$(CGOFLAG) go build -ldflags '-w -s' -o bouheki cmd/bouheki/bouheki.go
 
+.PHONY: test
 test: bpf-restricted-network
 	CGO_LDFLAGS="-lbpf" sudo -E go test -v ./...
+
+.PHONY: release
+release:
+	goreleaser release --rm-dist
