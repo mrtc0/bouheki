@@ -110,7 +110,9 @@ The log will record the blocked events.
   "Comm": "curl",
   "Hostname": "sandbox",
   "PID": 790791,
+  "ParentComm": "bash",
   "Port": 443,
+  "Protocol": "TCP",
   "level": "info",
   "msg": "Traffic is trapped in the filter.",
   "time": "2021-09-23T12:47:55Z"
@@ -121,7 +123,9 @@ The log will record the blocked events.
   "Comm": "curl",
   "Hostname": "sandbox",
   "PID": 790823,
+  "ParentComm": "bash",
   "Port": 443,
+  "Protocol": "TCP",
   "level": "info",
   "msg": "Traffic is trapped in the filter.",
   "time": "2021-09-23T12:49:29Z"
