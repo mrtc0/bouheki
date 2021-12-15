@@ -16,6 +16,8 @@ Flexibility to apply restricted network policies to specific resources such as p
   * BTF(`CONFIG_DEBUG_INFO_BTF`) must be enabled.
   * BPF LSM(`CONFIG_LSM` with `bpf`) must be enabled. This parameter can also be changed in the boot parameter.
 
+See [INSTALL.md](INSTALL.md) for details on installation.
+
 ### Linux distributions and supported kernels
 
 | Distro Name | Distro Version | Kernel Version |
@@ -134,7 +136,13 @@ The log will record the blocked events.
 
 # Development
 
-TBD
+```shell
+$ vagrant up && vagrant reload
+$ vagrant ssh
+
+$ cd /opt/go/src/github.com/mrtc0/bouheki/
+$ make build
+```
 
 # Test
 
