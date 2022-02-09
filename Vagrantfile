@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "bento/ubuntu-20.10"
+  config.vm.box = "ubuntu/impish64"
 
   config.vm.synced_folder ".", "/opt/go/src/github.com/mrtc0/bouheki"
 
@@ -34,7 +34,7 @@ Vagrant.configure("2") do |config|
     echo "GOROOT=/opt/go" >> /etc/profile
 
     # Enable BPF LSM
-    sed -i 's/GRUB_CMDLINE_LINUX=\"net.ifnames=0 biosdevname=0 \"$/GRUB_CMDLINE_LINUX=\"net.ifnames=0 biosdevname=0 lsm=landlock,lockdown,yama,apparmor,bpf\"/' /etc/default/grub
+    sed -i 's/GRUB_CMDLINE_LINUX=\"\"$/GRUB_CMDLINE_LINUX=\"lsm=lockdown,yama,apparmor,bpf\"/' /etc/default/grub
     update-grub
   SHELL
 end
