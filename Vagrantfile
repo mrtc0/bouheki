@@ -24,7 +24,10 @@ Vagrant.configure("2") do |config|
       linux-tools-generic \
       linux-tools-common \
       linux-headers-$(uname -r) \
-      linux-tools-$(uname -r)
+      linux-tools-$(uname -r) \
+      ca-certificates \
+      gnupg \
+      lsb-release
 
     # Setup Golang
     wget https://go.dev/dl/go1.17.5.linux-amd64.tar.gz -O /tmp/go1.17.5.linux-amd64.tar.gz
@@ -36,5 +39,11 @@ Vagrant.configure("2") do |config|
     # Enable BPF LSM
     sed -i 's/GRUB_CMDLINE_LINUX=\"\"$/GRUB_CMDLINE_LINUX=\"lsm=lockdown,yama,apparmor,bpf\"/' /etc/default/grub
     update-grub
+
+    # Install Docker
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    apt-get update
+    apt-get install docker-ce docker-ce-cli containerd.io
   SHELL
 end
