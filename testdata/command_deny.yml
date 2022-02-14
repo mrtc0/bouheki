@@ -8,8 +8,9 @@ network:
       - 93.184.216.34/32
   command:
     allow:
-      - 'wget'
+      - "wget"
+      - "systemd-resolve" # DNS
     deny:
-      - 'curl'
+      - "curl"
 log:
   format: json

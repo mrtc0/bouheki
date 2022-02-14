@@ -79,10 +79,10 @@ func TestRestrictedCommand(t *testing.T) {
 	eventsChannel := make(chan []byte)
 	mgr.Start(eventsChannel)
 
-	err := exec.Command("curl", "http://93.184.216.34").Run()
+	err := exec.Command("curl", "http://example.com").Run()
 	assert.NotNil(t, err)
 
-	cmd := exec.Command("wget", "-t", "1", "http://93.184.216.34/index.html", "-O", "/dev/null")
+	cmd := exec.Command("wget", "-t", "1", "http://example.com", "-O", "/dev/null")
 	err = cmd.Run()
 
 	fmt.Printf("%#v %#v", cmd.Stdout, err)
