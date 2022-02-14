@@ -11,13 +11,13 @@ BPF_RING_BUF(audit_events, AUDIT_EVENTS_RING_SIZE);
 BPF_HASH(bouheki_config, u32, struct bouheki_config, 256);
 
 BPF_HASH(allowed_command_list, struct allowed_command_key, u32, 256);
-BPF_HASH(denied_command_list, struct deny_command_key, u32, 256);
+BPF_HASH(denied_command_list, struct denied_command_key, u32, 256);
 
 BPF_HASH(allowed_uid_list, struct allowed_uid_key, u32, 256);
-BPF_HASH(denied_uid_list, struct deny_uid_key, u32, 256);
+BPF_HASH(denied_uid_list, struct denied_uid_key, u32, 256);
 
 BPF_HASH(allowed_gid_list, struct allowed_gid_key, u32, 256);
-BPF_HASH(denied_gid_list, struct deny_gid_key, u32, 256);
+BPF_HASH(denied_gid_list, struct denied_gid_key, u32, 256);
 
 struct
 {
@@ -70,6 +70,8 @@ static inline void report_ip4_block(void *ctx, u64 cg, enum action action, enum 
   bpf_ringbuf_output(&audit_events, &ev, sizeof(ev), 0);
 }
 
+// In some cases, such as getaddrinfo(), sin_port is set to 0.
+// Not audited because no communication actually occurs.
 static inline bool is_destination_port_zero(struct sockaddr_in *inet_addr)
 {
   return __builtin_bswap16(inet_addr->sin_port) == 0;
@@ -102,19 +104,19 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
       .addr = inet_addr->sin_addr};
 
   struct allowed_command_key allowed_command;
-  struct deny_command_key deny_command;
+  struct denied_command_key denied_command;
   struct allowed_uid_key allowed_uid;
-  struct deny_uid_key deny_uid;
+  struct denied_uid_key denied_uid;
   struct allowed_gid_key allowed_gid;
-  struct deny_gid_key deny_gid;
+  struct denied_gid_key denied_gid;
 
   bpf_get_current_comm(&allowed_command.comm, sizeof(allowed_command.comm));
-  bpf_get_current_comm(&deny_command.comm, sizeof(deny_command.comm));
+  bpf_get_current_comm(&denied_command.comm, sizeof(denied_command.comm));
 
   allowed_uid.uid = (unsigned)(bpf_get_current_uid_gid() & 0xffffffff);
-  deny_uid.uid = (unsigned)(bpf_get_current_uid_gid() & 0xffffffff);
+  denied_uid.uid = (unsigned)(bpf_get_current_uid_gid() & 0xffffffff);
   allowed_gid.gid = (unsigned)(bpf_get_current_uid_gid() >> 32);
-  deny_gid.gid = (unsigned)(bpf_get_current_uid_gid() >> 32);
+  denied_gid.gid = (unsigned)(bpf_get_current_uid_gid() >> 32);
 
   u32 index = 0;
 
@@ -162,17 +164,17 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     allow_command = 0;
   }
 
-  if (bpf_map_lookup_elem(&denied_command_list, &deny_command))
+  if (bpf_map_lookup_elem(&denied_command_list, &denied_command))
   {
     allow_command = -EPERM;
   }
 
-  if (bpf_map_lookup_elem(&denied_uid_list, &deny_uid))
+  if (bpf_map_lookup_elem(&denied_uid_list, &denied_uid))
   {
     allow_uid = -EPERM;
   }
 
-  if (bpf_map_lookup_elem(&denied_gid_list, &deny_gid))
+  if (bpf_map_lookup_elem(&denied_gid_list, &denied_gid))
   {
     allow_gid = -EPERM;
   }

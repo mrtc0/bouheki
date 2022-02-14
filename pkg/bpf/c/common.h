@@ -96,7 +96,7 @@ struct allowed_command_key
   char comm[TASK_COMM_LEN];
 };
 
-struct deny_command_key
+struct denied_command_key
 {
   char comm[TASK_COMM_LEN];
 };
@@ -106,7 +106,7 @@ struct allowed_uid_key
   u32 uid;
 };
 
-struct deny_uid_key
+struct denied_uid_key
 {
   u32 uid;
 };
@@ -116,7 +116,7 @@ struct allowed_gid_key
   u32 gid;
 };
 
-struct deny_gid_key
+struct denied_gid_key
 {
   u32 gid;
 };
