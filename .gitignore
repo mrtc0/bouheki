@@ -1,3 +1,4 @@
 vendor/
 dist/
 .vagrant
+pkg/bpf/bytecode/restricted-network.bpf.o

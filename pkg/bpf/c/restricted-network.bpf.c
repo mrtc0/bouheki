@@ -8,25 +8,16 @@
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
 BPF_RING_BUF(audit_events, AUDIT_EVENTS_RING_SIZE);
-BPF_HASH(b_config, u32, struct bouheki_config, 256);
+BPF_HASH(bouheki_config, u32, struct bouheki_config, 256);
 
-BPF_HASH(allowed_commands, struct allowed_command_key, u32, 256);
-BPF_HASH(deny_commands, struct deny_command_key, u32, 256);
+BPF_HASH(allowed_command_list, struct allowed_command_key, u32, 256);
+BPF_HASH(denied_command_list, struct deny_command_key, u32, 256);
 
-BPF_HASH(allowed_uids, struct allowed_uid_key, u32, 256);
-BPF_HASH(deny_uids, struct deny_uid_key, u32, 256);
+BPF_HASH(allowed_uid_list, struct allowed_uid_key, u32, 256);
+BPF_HASH(denied_uid_list, struct deny_uid_key, u32, 256);
 
-BPF_HASH(allowed_gids, struct allowed_gid_key, u32, 256);
-BPF_HASH(deny_gids, struct deny_gid_key, u32, 256);
-
-struct
-{
-	__uint(type, BPF_MAP_TYPE_LPM_TRIE);
-	__uint(max_entries, 256);
-	__type(key, struct ip4_trie_key);
-	__type(value, char);
-	__uint(map_flags, BPF_F_NO_PREALLOC);
-} denylist SEC(".maps");
+BPF_HASH(allowed_gid_list, struct allowed_gid_key, u32, 256);
+BPF_HASH(denied_gid_list, struct deny_gid_key, u32, 256);
 
 struct
 {
@@ -35,7 +26,16 @@ struct
 	__type(key, struct ip4_trie_key);
 	__type(value, char);
 	__uint(map_flags, BPF_F_NO_PREALLOC);
-} allowlist SEC(".maps");
+} denied_cidr_list SEC(".maps");
+
+struct
+{
+	__uint(type, BPF_MAP_TYPE_LPM_TRIE);
+	__uint(max_entries, 256);
+	__type(key, struct ip4_trie_key);
+	__type(value, char);
+	__uint(map_flags, BPF_F_NO_PREALLOC);
+} allowed_cidr_list SEC(".maps");
 
 static inline void report_ip4_block(void *ctx, u64 cg, enum action action, enum network_op op, struct socket *sock, const struct sockaddr_in *daddr)
 {
@@ -70,7 +70,8 @@ static inline void report_ip4_block(void *ctx, u64 cg, enum action action, enum 
 	bpf_ringbuf_output(&audit_events, &ev, sizeof(ev), 0);
 }
 
-static inline bool is_destination_port_zero(struct sockaddr_in *inet_addr) {
+static inline bool is_destination_port_zero(struct sockaddr_in *inet_addr)
+{
 	return __builtin_bswap16(inet_addr->sin_port) == 0;
 }
 
@@ -91,13 +92,14 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 
 	struct sockaddr_in *inet_addr = (struct sockaddr_in *)address;
 
-	if (is_destination_port_zero(inet_addr)) {
+	if (is_destination_port_zero(inet_addr))
+	{
 		return 0;
 	}
 
 	struct ip4_trie_key key = {
-			.prefixlen = 32,
-			.addr = inet_addr->sin_addr};
+		.prefixlen = 32,
+		.addr = inet_addr->sin_addr};
 
 	struct allowed_command_key allowed_command;
 	struct deny_command_key deny_command;
@@ -116,7 +118,7 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 
 	u32 index = 0;
 
-	struct bouheki_config *c = (struct bouheki_config *)bpf_map_lookup_elem(&b_config, &index);
+	struct bouheki_config *c = (struct bouheki_config *)bpf_map_lookup_elem(&bouheki_config, &index);
 
 	// Redundant by BPF constraints...
 	int has_allow_command = 0;
@@ -140,57 +142,57 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 		}
 	}
 
-	if (bpf_map_lookup_elem(&allowlist, &key))
+	if (bpf_map_lookup_elem(&allowed_cidr_list, &key))
 	{
 		allow_connect = 0;
 	}
 
-	if (bpf_map_lookup_elem(&allowed_uids, &allowed_uid) || has_allow_uid == 0)
+	if (bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid) || has_allow_uid == 0)
 	{
 		allow_uid = 0;
 	}
 
-	if (bpf_map_lookup_elem(&allowed_gids, &allowed_gid) || has_allow_gid == 0)
+	if (bpf_map_lookup_elem(&allowed_gid_list, &allowed_gid) || has_allow_gid == 0)
 	{
 		allow_gid = 0;
 	}
 
-	if (bpf_map_lookup_elem(&allowed_commands, &allowed_command) || has_allow_command == 0)
+	if (bpf_map_lookup_elem(&allowed_command_list, &allowed_command) || has_allow_command == 0)
 	{
 		allow_command = 0;
 	}
 
-	if (bpf_map_lookup_elem(&deny_commands, &deny_command))
+	if (bpf_map_lookup_elem(&denied_command_list, &deny_command))
 	{
 		allow_command = -EPERM;
 	}
 
-	if (bpf_map_lookup_elem(&deny_uids, &deny_uid))
+	if (bpf_map_lookup_elem(&denied_uid_list, &deny_uid))
 	{
 		allow_uid = -EPERM;
 	}
 
-	if (bpf_map_lookup_elem(&deny_gids, &deny_gid))
+	if (bpf_map_lookup_elem(&denied_gid_list, &deny_gid))
 	{
 		allow_gid = -EPERM;
 	}
 
-	if (bpf_map_lookup_elem(&denylist, &key))
+	if (bpf_map_lookup_elem(&denied_cidr_list, &key))
 	{
 		allow_connect = -EPERM;
 	}
 
-	if (bpf_map_lookup_elem(&denylist, &key) && bpf_map_lookup_elem(&allowed_commands, &allowed_command))
+	if (bpf_map_lookup_elem(&denied_cidr_list, &key) && bpf_map_lookup_elem(&allowed_command_list, &allowed_command))
 	{
 		allow_connect = 0;
 	}
 
-	if (bpf_map_lookup_elem(&denylist, &key) && bpf_map_lookup_elem(&allowed_uids, &allowed_uid))
+	if (bpf_map_lookup_elem(&denied_cidr_list, &key) && bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid))
 	{
 		allow_connect = 0;
 	}
 
-	if (bpf_map_lookup_elem(&denylist, &key) && bpf_map_lookup_elem(&allowed_gids, &allowed_gid))
+	if (bpf_map_lookup_elem(&denied_cidr_list, &key) && bpf_map_lookup_elem(&allowed_gid_list, &allowed_gid))
 	{
 		allow_connect = 0;
 	}

@@ -17,17 +17,26 @@ const (
 	TARGET_HOST      uint32 = 0
 	TAREGT_CONTAINER uint32 = 1
 
-	CONFIG_BPF_TABLE = "b_config"
+	// BPF Map Names
+	BOUHEKI_CONFIG_MAP_NAME       = "bouheki_config"
+	ALLOWED_CIDR_LIST_MAP_NAME    = "allowed_cidr_list"
+	DENIED_CIDR_LIST_MAP_NAME     = "denied_cidr_list"
+	ALLOWED_UID_LIST_MAP_NAME     = "allowed_uid_list"
+	DENIED_UID_LIST_MAP_NAME      = "denied_uid_list"
+	ALLOWED_GID_LIST_MAP_NAME     = "allowed_gid_list"
+	DENIED_GID_LIST_MAP_NAME      = "denied_gid_list"
+	ALLOWED_COMMAND_LIST_MAP_NAME = "allowed_command_list"
+	DENIED_COMMAND_LIST_MAP_NAME  = "denied_command_list"
 
 	/*
-		+---------------+---------------+-------------------+-------------------+
-		| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12  | 13 | 14 | 15 | 16 |
-		+---------------+---------------+-------------------+
-		|      MODE     |     TARGET    | Allow Command Size|  Allow UID Size   | Allow GID Size |
-		+---------------+---------------+-------+
+		+---------------+---------------+-------------------+-------------------+-------------------+
+		| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12  | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 |
+		+---------------+---------------+-------------------+-------------------+-------------------+
+		|      MODE     |     TARGET    | Allow Command Size|  Allow UID Size   | Allow GID Size    |
+		+---------------+---------------+-------------------+-------------------+-------------------+
 	*/
-	MAP_SIZE = 20
 
+	MAP_SIZE                = 20
 	MAP_MODE_START          = 0
 	MAP_MODE_END            = 4
 	MAP_TARGET_START        = 4
@@ -47,28 +56,28 @@ func (m *Manager) SetConfig() error {
 	if err := m.setConfigMap(); err != nil {
 		return err
 	}
-	if err := m.setAllowCIDRList(); err != nil {
+	if err := m.setAllowedCIDRList(); err != nil {
 		return err
 	}
-	if err := m.setDenyCIDRList(); err != nil {
+	if err := m.setDeniedCIDRList(); err != nil {
 		return err
 	}
 	if err := m.setAllowedCommandList(); err != nil {
 		return err
 	}
-	if err := m.setDenyCommandList(); err != nil {
+	if err := m.setDeniedCommandList(); err != nil {
 		return err
 	}
-	if err := m.setAllowUIDList(); err != nil {
+	if err := m.setAllowedUIDList(); err != nil {
 		return err
 	}
-	if err := m.setDenyUIDList(); err != nil {
+	if err := m.setDeniedUIDList(); err != nil {
 		return err
 	}
-	if err := m.setAllowGIDList(); err != nil {
+	if err := m.setAllowedGIDList(); err != nil {
 		return err
 	}
-	if err := m.setDenyGIDList(); err != nil {
+	if err := m.setDeniedGIDList(); err != nil {
 		return err
 	}
 	if err := m.attach(); err != nil {
@@ -135,7 +144,7 @@ func (m *Manager) setTarget(table *libbpfgo.BPFMap, key []byte) []byte {
 }
 
 func (m *Manager) setConfigMap() error {
-	configMap, err := m.mod.GetMap(CONFIG_BPF_TABLE)
+	configMap, err := m.mod.GetMap(BOUHEKI_CONFIG_MAP_NAME)
 	if err != nil {
 		return err
 	}
@@ -159,7 +168,7 @@ func (m *Manager) setConfigMap() error {
 }
 
 func (m *Manager) setAllowedCommandList() error {
-	commands, err := m.mod.GetMap("allowed_commands")
+	commands, err := m.mod.GetMap(ALLOWED_COMMAND_LIST_MAP_NAME)
 	if err != nil {
 		return err
 	}
@@ -174,8 +183,8 @@ func (m *Manager) setAllowedCommandList() error {
 	return nil
 }
 
-func (m *Manager) setDenyCommandList() error {
-	commands, err := m.mod.GetMap("deny_commands")
+func (m *Manager) setDeniedCommandList() error {
+	commands, err := m.mod.GetMap(DENIED_COMMAND_LIST_MAP_NAME)
 	if err != nil {
 		return err
 	}
@@ -190,8 +199,8 @@ func (m *Manager) setDenyCommandList() error {
 	return nil
 }
 
-func (m *Manager) setAllowUIDList() error {
-	uids, err := m.mod.GetMap("allowed_uids")
+func (m *Manager) setAllowedUIDList() error {
+	uids, err := m.mod.GetMap(ALLOWED_UID_LIST_MAP_NAME)
 	if err != nil {
 		return err
 	}
@@ -205,8 +214,8 @@ func (m *Manager) setAllowUIDList() error {
 	return nil
 }
 
-func (m *Manager) setDenyUIDList() error {
-	uids, err := m.mod.GetMap("deny_uids")
+func (m *Manager) setDeniedUIDList() error {
+	uids, err := m.mod.GetMap(DENIED_UID_LIST_MAP_NAME)
 	if err != nil {
 		return err
 	}
@@ -220,8 +229,8 @@ func (m *Manager) setDenyUIDList() error {
 	return nil
 }
 
-func (m *Manager) setAllowGIDList() error {
-	gids, err := m.mod.GetMap("allowed_gids")
+func (m *Manager) setAllowedGIDList() error {
+	gids, err := m.mod.GetMap(ALLOWED_GID_LIST_MAP_NAME)
 	if err != nil {
 		return err
 	}
@@ -235,8 +244,8 @@ func (m *Manager) setAllowGIDList() error {
 	return nil
 }
 
-func (m *Manager) setDenyGIDList() error {
-	gids, err := m.mod.GetMap("deny_uids")
+func (m *Manager) setDeniedGIDList() error {
+	gids, err := m.mod.GetMap(DENIED_UID_LIST_MAP_NAME)
 	if err != nil {
 		return err
 	}
@@ -250,8 +259,8 @@ func (m *Manager) setDenyGIDList() error {
 	return nil
 }
 
-func (m *Manager) setAllowCIDRList() error {
-	allowlist, err := m.mod.GetMap("allowlist")
+func (m *Manager) setAllowedCIDRList() error {
+	allowed_cidr_list, err := m.mod.GetMap(ALLOWED_CIDR_LIST_MAP_NAME)
 	if err != nil {
 		return err
 	}
@@ -261,7 +270,7 @@ func (m *Manager) setAllowCIDRList() error {
 		if err != nil {
 			return err
 		}
-		err = allowlist.Update(ipToKey(*allowAddresses), uint8(0))
+		err = allowed_cidr_list.Update(ipToKey(*allowAddresses), uint8(0))
 		if err != nil {
 			return err
 		}
@@ -270,8 +279,8 @@ func (m *Manager) setAllowCIDRList() error {
 	return nil
 }
 
-func (m *Manager) setDenyCIDRList() error {
-	denylist, err := m.mod.GetMap("denylist")
+func (m *Manager) setDeniedCIDRList() error {
+	denied_cidr_list, err := m.mod.GetMap(DENIED_CIDR_LIST_MAP_NAME)
 	if err != nil {
 		return err
 	}
@@ -281,7 +290,7 @@ func (m *Manager) setDenyCIDRList() error {
 		if err != nil {
 			return err
 		}
-		err = denylist.Update(ipToKey(*denyAddresses), uint8(0))
+		err = denied_cidr_list.Update(ipToKey(*denyAddresses), uint8(0))
 		if err != nil {
 			return err
 		}
