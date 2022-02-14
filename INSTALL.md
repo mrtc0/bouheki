@@ -21,7 +21,7 @@ Also, the `CONFIG_LSM` flag must contain `bpf`. This can also be controlled by b
 ```shell
 $ cat /etc/default/grub
 ...
-GRUB_CMDLINE_LINUX="... lsm=landlock,lockdown,yama,apparmor,bpf"
+GRUB_CMDLINE_LINUX="... lsm=lockdown,yama,apparmor,bpf"
 ...
 ```
 
