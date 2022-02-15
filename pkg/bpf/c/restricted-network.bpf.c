@@ -23,7 +23,7 @@ struct
 {
   __uint(type, BPF_MAP_TYPE_LPM_TRIE);
   __uint(max_entries, 256);
-  __type(key, struct ip4_trie_key);
+  __type(key, struct ipv4_trie_key);
   __type(value, char);
   __uint(map_flags, BPF_F_NO_PREALLOC);
 } denied_cidr_list SEC(".maps");
@@ -32,14 +32,14 @@ struct
 {
   __uint(type, BPF_MAP_TYPE_LPM_TRIE);
   __uint(max_entries, 256);
-  __type(key, struct ip4_trie_key);
+  __type(key, struct ipv4_trie_key);
   __type(value, char);
   __uint(map_flags, BPF_F_NO_PREALLOC);
 } allowed_cidr_list SEC(".maps");
 
-static inline void report_ip4_block(void *ctx, u64 cg, enum action action, enum lsm_hook_point point, struct socket *sock, const struct sockaddr_in *daddr)
+static inline void report_ipv4_event(void *ctx, u64 cg, enum action action, enum lsm_hook_point point, struct socket *sock, const struct sockaddr_in *daddr)
 {
-  struct audit_event_blocked_ipv4 ev;
+  struct audit_event_ipv4 ev;
 
   struct task_struct *current_task;
   struct uts_namespace *uts_ns;
@@ -99,7 +99,7 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     return 0;
   }
 
-  struct ip4_trie_key key = {
+  struct ipv4_trie_key key = {
       .prefixlen = 32,
       .addr = inet_addr->sin_addr};
 
@@ -207,12 +207,12 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 
   if (can_access != 0 && c && c->mode == MODE_BLOCK)
   {
-    report_ip4_block((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock, inet_addr);
+    report_ipv4_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock, inet_addr);
   }
 
   if (c && c->mode == MODE_MONITOR)
   {
-    report_ip4_block((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock, inet_addr);
+    report_ipv4_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock, inet_addr);
     return 0;
   }
 

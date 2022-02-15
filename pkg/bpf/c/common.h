@@ -5,16 +5,25 @@
 #include <bpf/bpf_tracing.h>
 
 #define ALLOW_ACCESS 0
-
 #define AF_INET 2
 #define AUDIT_EVENTS_RING_SIZE (4 * 4096)
 #define TASK_COMM_LEN 16
 #define NEW_UTS_LEN 64
+
 #define BPF_RING_BUF(name, size)        \
   struct                                \
   {                                     \
     __uint(type, BPF_MAP_TYPE_RINGBUF); \
     __uint(max_entries, size);          \
+  } name SEC(".maps")
+
+#define BPF_HASH(name, key_type, val_type, size) \
+  struct                                         \
+  {                                              \
+    __uint(type, BPF_MAP_TYPE_HASH);             \
+    __uint(max_entries, size);                   \
+    __type(key, key_type);                       \
+    __type(value, val_type);                     \
   } name SEC(".maps")
 
 enum mode
@@ -28,15 +37,6 @@ enum target
   TARGET_HOST,
   TARGET_CONTAINER
 };
-
-#define BPF_HASH(name, key_type, val_type, size) \
-  struct                                         \
-  {                                              \
-    __uint(type, BPF_MAP_TYPE_HASH);             \
-    __uint(max_entries, size);                   \
-    __type(key, key_type);                       \
-    __type(value, val_type);                     \
-  } name SEC(".maps")
 
 enum lsm_hook_point
 {
@@ -66,7 +66,7 @@ struct audit_event_header
   char parent_task[TASK_COMM_LEN];
 };
 
-struct audit_event_blocked_ipv4
+struct audit_event_ipv4
 {
   struct audit_event_header hdr;
   struct in_addr src;
@@ -85,7 +85,7 @@ struct bouheki_config
   int has_allow_uid;
 };
 
-struct ip4_trie_key
+struct ipv4_trie_key
 {
   u32 prefixlen;
   struct in_addr addr;
