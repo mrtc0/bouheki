@@ -19,12 +19,12 @@ type TestAuditManager struct {
 func TestActionResult(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    eventBlockedIPv4
+		input    detectEventIPv4
 		expected string
 	}{
 		{
 			name: "Returns 'BLOCKED' if value `0` is returned",
-			input: eventBlockedIPv4{
+			input: detectEventIPv4{
 				SrcIP:        [4]byte{0x8, 0x8, 0x8, 0x8},
 				DstIP:        [4]byte{0x8, 0x8, 0x8, 0x8},
 				DstPort:      80,
@@ -36,7 +36,7 @@ func TestActionResult(t *testing.T) {
 		},
 		{
 			name: "Returns 'MONITOR' if value `1` is returned",
-			input: eventBlockedIPv4{
+			input: detectEventIPv4{
 				SrcIP:        [4]byte{0x8, 0x8, 0x8, 0x8},
 				DstIP:        [4]byte{0x8, 0x8, 0x8, 0x8},
 				DstPort:      80,
@@ -48,7 +48,7 @@ func TestActionResult(t *testing.T) {
 		},
 		{
 			name: "Returns 'unknown' if undefined value is returned.",
-			input: eventBlockedIPv4{
+			input: detectEventIPv4{
 				SrcIP:        [4]byte{0x8, 0x8, 0x8, 0x8},
 				DstIP:        [4]byte{0x8, 0x8, 0x8, 0x8},
 				DstPort:      80,

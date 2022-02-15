@@ -39,7 +39,7 @@ type eventHeader struct {
 	_             [PADDING_LEN]byte
 }
 
-type eventBlockedIPv4 struct {
+type detectEventIPv4 struct {
 	SrcIP        [SRCIP_LEN]byte
 	DstIP        [DSTIP_LEN]byte
 	DstPort      uint16
@@ -48,7 +48,7 @@ type eventBlockedIPv4 struct {
 	SockType     uint8
 }
 
-func (e *eventBlockedIPv4) ActionResult() string {
+func (e *detectEventIPv4) ActionResult() string {
 	switch e.Action {
 	case ACTION_MONITOR:
 		return ACTION_MONITOR_STRING
@@ -119,15 +119,15 @@ func RunAudit(conf *config.Config) {
 	}
 }
 
-func parseEvent(eventBytes []byte) (eventHeader, eventBlockedIPv4, error) {
+func parseEvent(eventBytes []byte) (eventHeader, detectEventIPv4, error) {
 	buf := bytes.NewBuffer(eventBytes)
 	header, err := parseEventHeader(buf)
 	if err != nil {
-		return eventHeader{}, eventBlockedIPv4{}, err
+		return eventHeader{}, detectEventIPv4{}, err
 	}
 	body, err := parseEventBlockedIPv4(buf)
 	if err != nil {
-		return eventHeader{}, eventBlockedIPv4{}, err
+		return eventHeader{}, detectEventIPv4{}, err
 	}
 
 	return header, body, nil
@@ -142,10 +142,10 @@ func parseEventHeader(buf *bytes.Buffer) (eventHeader, error) {
 	return header, nil
 }
 
-func parseEventBlockedIPv4(buf *bytes.Buffer) (eventBlockedIPv4, error) {
-	var body eventBlockedIPv4
+func parseEventBlockedIPv4(buf *bytes.Buffer) (detectEventIPv4, error) {
+	var body detectEventIPv4
 	if err := binary.Read(buf, binary.LittleEndian, &body); err != nil {
-		return eventBlockedIPv4{}, err
+		return detectEventIPv4{}, err
 	}
 
 	return body, nil
