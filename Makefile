@@ -16,6 +16,7 @@ $(BPF_BUILDDIR)/%.bpf.o: pkg/bpf/c/%.bpf.c $(wildcard bpf/*.h) | $(BPF_BUILDDIR)
 .PHONY: bpf-restricted-network
 bpf-restricted-network: $(BPF_BUILDDIR)/restricted-network.bpf.o
 
+.PHONY: vmlinux
 vmlinux:
 	$(shell bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h)
 
@@ -25,7 +26,8 @@ build: bpf-restricted-network
 
 .PHONY: test
 test: bpf-restricted-network
-	CGO_LDFLAGS="-lbpf" sudo -E go test -v ./...
+	which gotestsum || go install gotest.tools/gotestsum@latest
+	CGO_LDFLAGS="-lbpf" sudo -E gotestsum -- --mod=vendor -bench=^$$ -race ./...
 
 .PHONY: release
 release:

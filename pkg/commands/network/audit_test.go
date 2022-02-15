@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"testing"
@@ -130,7 +129,6 @@ func TestRestrictedCommand(t *testing.T) {
 	cmd := exec.Command("wget", "-t", "1", "http://example.com", "-O", "/dev/null")
 	err = cmd.Run()
 
-	fmt.Printf("%#v %#v", cmd.Stdout, err)
 	assert.Nil(t, err)
 
 	mgr.mod.Close()
@@ -179,8 +177,7 @@ func TestAuditContainerDoNotCaptureHostEvents(t *testing.T) {
 	cmd.Wait()
 
 	go func() {
-		eventBytes := <-eventsChannel
-		fmt.Printf("%#v", eventBytes)
+		<-eventsChannel
 		done <- true
 	}()
 
@@ -189,6 +186,7 @@ func TestAuditContainerDoNotCaptureHostEvents(t *testing.T) {
 	// If there's a better way, I'll replace it.
 	select {
 	case <-timeout:
+		t.Log("OK")
 	case <-done:
 		t.Fatal("Got host events. Expect capture only container's event.")
 	}
