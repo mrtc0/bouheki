@@ -38,10 +38,10 @@ enum target
     __type(value, val_type);                     \
   } name SEC(".maps")
 
-enum network_op
+enum lsm_hook_point
 {
-  OP_CONNECT,
-  OP_SENDMSG
+  CONNECT,
+  SENDMSG // Not implemented yet.
 };
 
 enum action
@@ -53,7 +53,7 @@ enum action
 enum audit_event_type
 {
   BLOCKED_IPV4,
-  BLOCKED_IPV6
+  BLOCKED_IPV6 // Not implemented yet.
 };
 
 struct audit_event_header

@@ -12,11 +12,22 @@ import (
 	"github.com/aquasecurity/libbpfgo"
 )
 
-const TASK_COMM_LEN = 16
-const NEW_UTS_LEN = 64
-const PADDING_LEN = 7
-const SRCIP_LEN = 4
-const DSTIP_LEN = 4
+const (
+	TASK_COMM_LEN = 16
+	NEW_UTS_LEN   = 64
+	PADDING_LEN   = 7
+	SRCIP_LEN     = 4
+	DSTIP_LEN     = 4
+
+	ACTION_MONITOR        uint8 = 0
+	ACTION_BLOCKED        uint8 = 1
+	ACTION_MONITOR_STRING       = "MONITOR"
+	ACTION_BLOCKED_STRING       = "BLOCKED"
+	ACTION_UNKNOWN_STRING       = "UNKNOWN"
+
+	LSM_HOOK_POINT_CONNECT uint8 = 0
+	LSM_HOOK_POINT_SENDMSG uint8 = 1
+)
 
 type eventHeader struct {
 	CGroupID      uint64
@@ -29,27 +40,27 @@ type eventHeader struct {
 }
 
 type eventBlockedIPv4 struct {
-	SrcIP    [SRCIP_LEN]byte
-	DstIP    [DSTIP_LEN]byte
-	DstPort  uint16
-	Op       uint8
-	Action   uint8
-	SockType uint8
+	SrcIP        [SRCIP_LEN]byte
+	DstIP        [DSTIP_LEN]byte
+	DstPort      uint16
+	LsmHookPoint uint8
+	Action       uint8
+	SockType     uint8
 }
 
 func (e *eventBlockedIPv4) ActionResult() string {
 	switch e.Action {
-	case 0:
-		return "MONITOR"
-	case 1:
-		return "BLOCKED"
+	case ACTION_MONITOR:
+		return ACTION_MONITOR_STRING
+	case ACTION_BLOCKED:
+		return ACTION_BLOCKED_STRING
 	default:
-		return "UNKNOWN"
+		return ACTION_UNKNOWN_STRING
 	}
 }
 
 const (
-	objName = "restricted-network"
+	BPF_OBJECT_NAME = "restricted-network"
 )
 
 func setupBPFProgram() (*libbpfgo.Module, error) {
@@ -57,24 +68,16 @@ func setupBPFProgram() (*libbpfgo.Module, error) {
 	if err != nil {
 		return nil, err
 	}
-	mod, err := libbpfgo.NewModuleFromBuffer(bytecode, objName)
+	mod, err := libbpfgo.NewModuleFromBuffer(bytecode, BPF_OBJECT_NAME)
 	if err != nil {
 		return nil, err
 	}
-	err = mod.BPFLoadObject()
-	if err != nil {
+
+	if err = mod.BPFLoadObject(); err != nil {
 		return nil, err
 	}
 
 	return mod, nil
-}
-
-func loadBytecode(mode string) ([]byte, string, error) {
-	bytecode, err := bpf.EmbedFS.ReadFile("bytecode/restricted-network.bpf.o")
-	if err != nil {
-		return nil, "", err
-	}
-	return bytecode, "restricted-network", nil
 }
 
 func RunAudit(conf *config.Config) {
@@ -88,7 +91,7 @@ func RunAudit(conf *config.Config) {
 		config: conf,
 	}
 
-	err = mgr.SetConfig()
+	err = mgr.SetConfigToMap()
 	if err != nil {
 		log.Fatal(err)
 	}

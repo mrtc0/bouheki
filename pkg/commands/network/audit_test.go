@@ -11,14 +11,59 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	ACTION_MONITOR = "MONITOR"
-	ACTION_BLOCKED = "BLOCKED"
-)
-
 type TestAuditManager struct {
 	manager Manager
 	cmd     *exec.Cmd
+}
+
+func TestActionResult(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    eventBlockedIPv4
+		expected string
+	}{
+		{
+			name: "Returns 'BLOCKED' if value `0` is returned",
+			input: eventBlockedIPv4{
+				SrcIP:        [4]byte{0x8, 0x8, 0x8, 0x8},
+				DstIP:        [4]byte{0x8, 0x8, 0x8, 0x8},
+				DstPort:      80,
+				LsmHookPoint: LSM_HOOK_POINT_CONNECT,
+				Action:       ACTION_BLOCKED,
+				SockType:     TCP,
+			},
+			expected: ACTION_BLOCKED_STRING,
+		},
+		{
+			name: "Returns 'MONITOR' if value `1` is returned",
+			input: eventBlockedIPv4{
+				SrcIP:        [4]byte{0x8, 0x8, 0x8, 0x8},
+				DstIP:        [4]byte{0x8, 0x8, 0x8, 0x8},
+				DstPort:      80,
+				LsmHookPoint: LSM_HOOK_POINT_CONNECT,
+				Action:       ACTION_MONITOR,
+				SockType:     TCP,
+			},
+			expected: ACTION_MONITOR_STRING,
+		},
+		{
+			name: "Returns 'unknown' if undefined value is returned.",
+			input: eventBlockedIPv4{
+				SrcIP:        [4]byte{0x8, 0x8, 0x8, 0x8},
+				DstIP:        [4]byte{0x8, 0x8, 0x8, 0x8},
+				DstPort:      80,
+				LsmHookPoint: LSM_HOOK_POINT_CONNECT,
+				Action:       10,
+				SockType:     TCP,
+			},
+			expected: ACTION_UNKNOWN_STRING,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, test.input.ActionResult())
+		})
+	}
 }
 
 func TestAuditBlockMode(t *testing.T) {
@@ -29,7 +74,7 @@ func TestAuditBlockMode(t *testing.T) {
 	header, body, err := parseEvent(eventBytes)
 
 	assert.Nil(t, err)
-	assert.Equal(t, ACTION_BLOCKED, body.ActionResult())
+	assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
 	assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
 	assert.Equal(t, "93.184.216.34", byte2IPv4(body.DstIP))
 
@@ -50,7 +95,7 @@ func TestAuditMonitorMode(t *testing.T) {
 	header, body, err := parseEvent(eventBytes)
 
 	assert.Nil(t, err)
-	assert.Equal(t, ACTION_MONITOR, body.ActionResult())
+	assert.Equal(t, ACTION_MONITOR_STRING, body.ActionResult())
 	assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
 	assert.Equal(t, "93.184.216.34", byte2IPv4(body.DstIP))
 
@@ -105,7 +150,7 @@ func TestAuditContainerBlock(t *testing.T) {
 	}
 
 	assert.Nil(t, err)
-	assert.Equal(t, body.ActionResult(), ACTION_BLOCKED)
+	assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
 	assert.Equal(t, byte2IPv4(body.DstIP), "93.184.216.34")
 	assert.Equal(t, len(nodename2string(header.Nodename)), 12)
 	assert.NotEqual(t, nodename2string(header.Nodename), hostname)
@@ -191,7 +236,7 @@ func createManager(conf *config.Config) Manager {
 		config: conf,
 	}
 
-	err = mgr.SetConfig()
+	err = mgr.SetConfigToMap()
 	if err != nil {
 		panic(err)
 	}

@@ -52,7 +52,7 @@ type Manager struct {
 	rb     *libbpfgo.RingBuffer
 }
 
-func (m *Manager) SetConfig() error {
+func (m *Manager) SetConfigToMap() error {
 	if err := m.setConfigMap(); err != nil {
 		return err
 	}

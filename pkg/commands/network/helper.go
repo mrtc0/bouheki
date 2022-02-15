@@ -5,6 +5,14 @@ import (
 	"strings"
 )
 
+const (
+	TCP                     = 1
+	UDP                     = 2
+	TCP_STRING              = "TCP"
+	UDP_STRING              = "UDP"
+	PROTOCOL_UNKNOWN_STRING = "UNKOWN"
+)
+
 func byte2IPv4(addrBytes [4]byte) string {
 	var s []string
 	for _, b := range addrBytes {
@@ -36,11 +44,11 @@ func nodename2string(bytes [65]byte) string {
 func sockTypeToProtocolName(sockType uint8) string {
 	// https://elixir.bootlin.com/linux/latest/source/include/linux/net.h#L61
 	switch sockType {
-	case 1:
-		return "TCP"
-	case 2:
-		return "UDP"
+	case TCP:
+		return TCP_STRING
+	case UDP:
+		return UDP_STRING
 	default:
-		return "UNKNOWN"
+		return PROTOCOL_UNKNOWN_STRING
 	}
 }
