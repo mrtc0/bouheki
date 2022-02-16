@@ -18,6 +18,7 @@ Vagrant.configure("2") do |config|
       build-essential \
       libbpf-dev \
       clang \
+      gcc-multilib \
       llvm \
       zlib1g-dev \
       libelf-dev \
