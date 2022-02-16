@@ -126,7 +126,7 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
   bool is_ipv4 = (address->sa_family == AF_INET);
 
   // TODO: support IPv6
-  if (is_ipv4 || is_ipv6)
+  if (!(is_ipv4 || is_ipv6))
     return 0;
 
   u64 cg = bpf_get_current_cgroup_id();
@@ -195,10 +195,10 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     }
   }
 
-//  if (bpf_map_lookup_elem(&allowed_cidr_list, &key))
-//  {
-//    allow_connect = 0;
-//  }
+  if (bpf_map_lookup_elem(&allowed_cidr_list, &key))
+  {
+    allow_connect = 0;
+  }
 
   if (bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid) || has_allow_uid == 0)
   {
@@ -230,7 +230,6 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     allow_gid = -EPERM;
   }
 
-  /*
   if (bpf_map_lookup_elem(&denied_cidr_list, &key))
   {
     allow_connect = -EPERM;
@@ -250,7 +249,6 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
   {
     allow_connect = 0;
   }
-  */
 
   int can_access = -EPERM;
   if (allow_connect == 0 && allow_uid == 0 && allow_gid == 0 && allow_command == 0)
