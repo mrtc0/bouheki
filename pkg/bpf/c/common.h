@@ -1,4 +1,3 @@
-#include <linux/errno.h>
 #include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_core_read.h>
@@ -6,6 +5,7 @@
 
 #define ALLOW_ACCESS 0
 #define AF_INET 2
+#define AF_INET6 10
 #define AUDIT_EVENTS_RING_SIZE (4 * 4096)
 #define TASK_COMM_LEN 16
 #define NEW_UTS_LEN 64
@@ -77,6 +77,17 @@ struct audit_event_ipv4
   u8 sock_type;
 };
 
+struct audit_event_ipv6
+{
+  struct audit_event_header hdr;
+  struct in6_addr src;
+  struct in6_addr dst;
+  u16 dport;
+  u8 operation;
+  u8 action;
+  u8 sock_type;
+};
+
 struct bouheki_config
 {
   enum mode mode;
@@ -85,10 +96,19 @@ struct bouheki_config
   int has_allow_uid;
 };
 
-struct ipv4_trie_key
+struct ip_trie_key
 {
   u32 prefixlen;
-  struct in_addr addr;
+  union {
+    struct in_addr v4_addr;
+    struct in6_addr v6_addr;
+  } addr;
+};
+
+union sockaddr_in_union
+{
+    struct sockaddr_in *ipv4;
+    struct sockaddr_in6 *ipv6;
 };
 
 struct allowed_command_key
@@ -127,6 +147,15 @@ static inline struct in_addr src_addr4(const struct socket *sock)
   __builtin_memset(&addr, 0, sizeof(addr));
 
   addr.s_addr = BPF_CORE_READ(sock, sk, __sk_common.skc_rcv_saddr);
+  return addr;
+}
+
+static inline struct in6_addr src_addr6(const struct socket *sock)
+{
+  struct in6_addr addr;
+  __builtin_memset(&addr, 0, sizeof(addr));
+
+  addr = BPF_CORE_READ(sock, sk, __sk_common.skc_v6_rcv_saddr);
   return addr;
 }
 
