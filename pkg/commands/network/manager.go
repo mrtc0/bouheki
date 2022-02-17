@@ -277,7 +277,8 @@ func (m *Manager) setAllowedCIDRList() error {
 		if err != nil {
 			return err
 		}
-		isV6 := allowAddresses.IP.To4 == nil
+
+		isV6 := allowAddresses.IP.To4() == nil
 		if isV6 {
 			err = allowed_v6_cidr_list.Update(ipToKey(*allowAddresses), uint8(0))
 			if err != nil {
