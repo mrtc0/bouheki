@@ -1,20 +1,20 @@
 package main
 
 import (
-        "os"
+	"os"
 
-        "github.com/mrtc0/bouheki/pkg/commands"
-        log "github.com/sirupsen/logrus"
+	"github.com/mrtc0/bouheki/pkg/commands"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
-        version = "dev"
+	version = "dev"
 )
 
 func main() {
-        app := commands.NewApp(version)
-        err := app.Run(os.Args)
-        if err != nil {
-                log.Fatal(err)
-        }
+	app := commands.NewApp(version)
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

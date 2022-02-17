@@ -20,9 +20,9 @@ const (
 	// BPF Map Names
 	BOUHEKI_CONFIG_MAP_NAME       = "bouheki_config"
 	ALLOWED_V4_CIDR_LIST_MAP      = "allowed_v4_cidr_list"
-  ALLOWED_V6_CIDR_LIST_MAP      = "allowed_v6_cidr_list"
+	ALLOWED_V6_CIDR_LIST_MAP      = "allowed_v6_cidr_list"
 	DENIED_V4_CIDR_LIST_MAP_NAME  = "denied_v4_cidr_list"
-  DENIED_V6_CIDR_LIST_MAP_NAME  = "denied_v6_cidr_list"
+	DENIED_V6_CIDR_LIST_MAP_NAME  = "denied_v6_cidr_list"
 	ALLOWED_UID_LIST_MAP_NAME     = "allowed_uid_list"
 	DENIED_UID_LIST_MAP_NAME      = "denied_uid_list"
 	ALLOWED_GID_LIST_MAP_NAME     = "allowed_gid_list"
@@ -267,28 +267,28 @@ func (m *Manager) setAllowedCIDRList() error {
 		return err
 	}
 
-  allowed_v6_cidr_list, err := m.mod.GetMap(ALLOWED_V6_CIDR_LIST_MAP)
-  if err != nil {
-    return err
-  }
+	allowed_v6_cidr_list, err := m.mod.GetMap(ALLOWED_V6_CIDR_LIST_MAP)
+	if err != nil {
+		return err
+	}
 
 	for _, s := range m.config.Network.CIDR.Allow {
 		allowAddresses, err := parseCIDR(s)
 		if err != nil {
 			return err
 		}
-    isV6 := allowAddresses.IP.To4 == nil
-    if (isV6) {
-      err = allowed_v6_cidr_list.Update(ipToKey(*allowAddresses), uint8(0))
-      if err != nil {
-        return err
-      }
-    } else {
-		  err = allowed_v4_cidr_list.Update(ipToKey(*allowAddresses), uint8(0))
-		  if err != nil {
-		  	return err
-		  }
-    }
+		isV6 := allowAddresses.IP.To4 == nil
+		if isV6 {
+			err = allowed_v6_cidr_list.Update(ipToKey(*allowAddresses), uint8(0))
+			if err != nil {
+				return err
+			}
+		} else {
+			err = allowed_v4_cidr_list.Update(ipToKey(*allowAddresses), uint8(0))
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -300,40 +300,40 @@ func (m *Manager) setDeniedCIDRList() error {
 		return err
 	}
 
-  denied_v6_cidr_list, err := m.mod.GetMap(DENIED_V6_CIDR_LIST_MAP_NAME)
-  if err != nil {
-    return err
-  }
+	denied_v6_cidr_list, err := m.mod.GetMap(DENIED_V6_CIDR_LIST_MAP_NAME)
+	if err != nil {
+		return err
+	}
 
 	for _, s := range m.config.Network.CIDR.Deny {
 		denyAddresses, err := parseCIDR(s)
 		if err != nil {
 			return err
 		}
-    isV6 := denyAddresses.IP.To4() == nil
-    if (isV6) {
-      err = denied_v6_cidr_list.Update(ipToKey(*denyAddresses), uint8(0))
-      if err != nil {
-        return err
-      }
-    } else {
-		  err = denied_v4_cidr_list.Update(ipToKey(*denyAddresses), uint8(0))
-		  if err != nil {
-		  	return err
-		  }
-    }
+		isV6 := denyAddresses.IP.To4() == nil
+		if isV6 {
+			err = denied_v6_cidr_list.Update(ipToKey(*denyAddresses), uint8(0))
+			if err != nil {
+				return err
+			}
+		} else {
+			err = denied_v4_cidr_list.Update(ipToKey(*denyAddresses), uint8(0))
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
 }
 
 func ipToKey(n net.IPNet) []byte {
-  isV6 := n.IP.To4() == nil
-  if isV6 {
-    return ipv6ToKey(n)
-  } else {
-    return ipv4ToKey(n)
-  }
+	isV6 := n.IP.To4() == nil
+	if isV6 {
+		return ipv6ToKey(n)
+	} else {
+		return ipv4ToKey(n)
+	}
 }
 
 func ipv4ToKey(n net.IPNet) []byte {
@@ -348,14 +348,14 @@ func ipv4ToKey(n net.IPNet) []byte {
 }
 
 func ipv6ToKey(n net.IPNet) []byte {
-  prefixLen, _ := n.Mask.Size()
-  
-  key := make([]byte, 20)
+	prefixLen, _ := n.Mask.Size()
 
-  binary.LittleEndian.PutUint32(key[0:4], uint32(prefixLen))
-  copy(key[4:], n.IP)
+	key := make([]byte, 20)
 
-  return key
+	binary.LittleEndian.PutUint32(key[0:4], uint32(prefixLen))
+	copy(key[4:], n.IP)
+
+	return key
 }
 
 func byteToKey(b []byte) []byte {
