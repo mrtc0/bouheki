@@ -96,19 +96,16 @@ struct bouheki_config
   int has_allow_uid;
 };
 
-struct ip_trie_key
+struct ipv4_trie_key
 {
   u32 prefixlen;
-  union {
-    struct in_addr v4_addr;
-    struct in6_addr v6_addr;
-  } addr;
+  struct in_addr addr;
 };
 
-union sockaddr_in_union
+struct ipv6_trie_key
 {
-    struct sockaddr_in *ipv4;
-    struct sockaddr_in6 *ipv6;
+  u32 prefixlen;
+  struct in6_addr addr;
 };
 
 struct allowed_command_key

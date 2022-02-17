@@ -19,8 +19,10 @@ const (
 
 	// BPF Map Names
 	BOUHEKI_CONFIG_MAP_NAME       = "bouheki_config"
-	ALLOWED_CIDR_LIST_MAP_NAME    = "allowed_cidr_list"
-	DENIED_CIDR_LIST_MAP_NAME     = "denied_cidr_list"
+	ALLOWED_V4_CIDR_LIST_MAP      = "allowed_v4_cidr_list"
+  ALLOWED_V6_CIDR_LIST_MAP      = "allowed_v6_cidr_list"
+	DENIED_V4_CIDR_LIST_MAP_NAME  = "denied_v4_cidr_list"
+  DENIED_V6_CIDR_LIST_MAP_NAME  = "denied_v6_cidr_list"
 	ALLOWED_UID_LIST_MAP_NAME     = "allowed_uid_list"
 	DENIED_UID_LIST_MAP_NAME      = "denied_uid_list"
 	ALLOWED_GID_LIST_MAP_NAME     = "allowed_gid_list"
@@ -260,40 +262,66 @@ func (m *Manager) setDeniedGIDList() error {
 }
 
 func (m *Manager) setAllowedCIDRList() error {
-	allowed_cidr_list, err := m.mod.GetMap(ALLOWED_CIDR_LIST_MAP_NAME)
+	allowed_v4_cidr_list, err := m.mod.GetMap(ALLOWED_V4_CIDR_LIST_MAP)
 	if err != nil {
 		return err
 	}
+
+  allowed_v6_cidr_list, err := m.mod.GetMap(ALLOWED_V6_CIDR_LIST_MAP)
+  if err != nil {
+    return err
+  }
 
 	for _, s := range m.config.Network.CIDR.Allow {
 		allowAddresses, err := parseCIDR(s)
 		if err != nil {
 			return err
 		}
-		err = allowed_cidr_list.Update(ipToKey(*allowAddresses), uint8(0))
-		if err != nil {
-			return err
-		}
+    isV6 := allowAddresses.IP.To4 == nil
+    if (isV6) {
+      err = allowed_v6_cidr_list.Update(ipToKey(*allowAddresses), uint8(0))
+      if err != nil {
+        return err
+      }
+    } else {
+		  err = allowed_v4_cidr_list.Update(ipToKey(*allowAddresses), uint8(0))
+		  if err != nil {
+		  	return err
+		  }
+    }
 	}
 
 	return nil
 }
 
 func (m *Manager) setDeniedCIDRList() error {
-	denied_cidr_list, err := m.mod.GetMap(DENIED_CIDR_LIST_MAP_NAME)
+	denied_v4_cidr_list, err := m.mod.GetMap(DENIED_V4_CIDR_LIST_MAP_NAME)
 	if err != nil {
 		return err
 	}
+
+  denied_v6_cidr_list, err := m.mod.GetMap(DENIED_V6_CIDR_LIST_MAP_NAME)
+  if err != nil {
+    return err
+  }
 
 	for _, s := range m.config.Network.CIDR.Deny {
 		denyAddresses, err := parseCIDR(s)
 		if err != nil {
 			return err
 		}
-		err = denied_cidr_list.Update(ipToKey(*denyAddresses), uint8(0))
-		if err != nil {
-			return err
-		}
+    isV6 := denyAddresses.IP.To4() == nil
+    if (isV6) {
+      err = denied_v6_cidr_list.Update(ipToKey(*denyAddresses), uint8(0))
+      if err != nil {
+        return err
+      }
+    } else {
+		  err = denied_v4_cidr_list.Update(ipToKey(*denyAddresses), uint8(0))
+		  if err != nil {
+		  	return err
+		  }
+    }
 	}
 
 	return nil

@@ -23,19 +23,37 @@ struct
 {
   __uint(type, BPF_MAP_TYPE_LPM_TRIE);
   __uint(max_entries, 256);
-  __type(key, struct ip_trie_key);
+  __type(key, struct ipv4_trie_key);
   __type(value, char);
   __uint(map_flags, BPF_F_NO_PREALLOC);
-} denied_cidr_list SEC(".maps");
+} denied_v4_cidr_list SEC(".maps");
 
 struct
 {
   __uint(type, BPF_MAP_TYPE_LPM_TRIE);
   __uint(max_entries, 256);
-  __type(key, struct ip_trie_key);
+  __type(key, struct ipv6_trie_key);
   __type(value, char);
   __uint(map_flags, BPF_F_NO_PREALLOC);
-} allowed_cidr_list SEC(".maps");
+} denied_v6_cidr_list SEC(".maps");
+
+struct
+{
+  __uint(type, BPF_MAP_TYPE_LPM_TRIE);
+  __uint(max_entries, 256);
+  __type(key, struct ipv4_trie_key);
+  __type(value, char);
+  __uint(map_flags, BPF_F_NO_PREALLOC);
+} allowed_v4_cidr_list SEC(".maps");
+
+struct
+{
+  __uint(type, BPF_MAP_TYPE_LPM_TRIE);
+  __uint(max_entries, 256);
+  __type(key, struct ipv6_trie_key);
+  __type(value, char);
+  __uint(map_flags, BPF_F_NO_PREALLOC);
+} allowed_v6_cidr_list SEC(".maps");
 
 static inline void report_ipv4_event(void *ctx, u64 cg, enum action action, enum lsm_hook_point point, struct socket *sock, const struct sockaddr_in *daddr)
 {
@@ -105,13 +123,16 @@ static inline void report_ipv6_event(void *ctx, u64 cg, enum action action, enum
 
 // In some cases, such as getaddrinfo(), sin_port is set to 0.
 // Not audited because no communication actually occurs.
-static inline bool is_destination_port_zero(union sockaddr_in_union inet_addr, bool is_ipv6)
+static inline bool is_destination_port_zero_v6(struct sockaddr_in6 *inet_addr)
 {
-  if (is_ipv6) {
-    return __builtin_bswap16(inet_addr.ipv6->sin6_port) == 0;
-  } else {
-    return __builtin_bswap16(inet_addr.ipv4->sin_port) == 0;
-  }
+  return __builtin_bswap16(inet_addr->sin6_port) == 0;
+}
+
+// In some cases, such as getaddrinfo(), sin_port is set to 0.
+// Not audited because no communication actually occurs.
+static inline bool is_destination_port_zero_v4(struct sockaddr_in *inet_addr)
+{
+  return __builtin_bswap16(inet_addr->sin_port) == 0;
 }
 
 // TODO: lsm/send_msg
@@ -129,29 +150,33 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
   if (!(is_ipv4 || is_ipv6))
     return 0;
 
+  bpf_printk("test\n");
   u64 cg = bpf_get_current_cgroup_id();
 
-  union sockaddr_in_union inet_addr;
+  struct sockaddr_in *inet_addr4;
+  struct sockaddr_in6 *inet_addr6;
       
-  if (is_ipv4) {
-    inet_addr.ipv4 = (struct sockaddr_in *)address;
+  if (is_ipv6) {
+    inet_addr6 = (struct sockaddr_in6 *)address;
   } else {
-    inet_addr.ipv6 = (struct sockaddr_in6 *)address;
+    inet_addr4 = (struct sockaddr_in *)address;
   }
 
-  if (is_destination_port_zero(inet_addr, is_ipv6))
+  if ((is_ipv6 && is_destination_port_zero_v6(inet_addr6)) ||
+      (is_ipv4 && is_destination_port_zero_v4(inet_addr4)))
   {
     return 0;
   }
 
-  struct ip_trie_key key = {
-    .prefixlen = is_ipv4 ? 32 : 128,
-    .addr.v4_addr=inet_addr.ipv4->sin_addr
+  struct ipv4_trie_key key4 = {
+    .prefixlen = 32,
+    .addr = inet_addr4->sin_addr
   };
 
-  if (is_ipv6) {
-    key.addr.v6_addr = inet_addr.ipv6->sin6_addr;
-  }
+  struct ipv6_trie_key key6 = {
+    .prefixlen = 128,
+    .addr = inet_addr6->sin6_addr
+  };
 
   struct allowed_command_key allowed_command;
   struct denied_command_key denied_command;
@@ -195,7 +220,8 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     }
   }
 
-  if (bpf_map_lookup_elem(&allowed_cidr_list, &key))
+  if (is_ipv4 && bpf_map_lookup_elem(&allowed_v4_cidr_list, &key4))// ||
+ //     (is_ipv6 && bpf_map_lookup_elem(&allowed_v6_cidr_list, &key6)))
   {
     allow_connect = 0;
   }
@@ -230,22 +256,29 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     allow_gid = -EPERM;
   }
 
-  if (bpf_map_lookup_elem(&denied_cidr_list, &key))
+  if (is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4))// ||
+//      (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6)))
   {
     allow_connect = -EPERM;
   }
 
-  if (bpf_map_lookup_elem(&denied_cidr_list, &key) && bpf_map_lookup_elem(&allowed_command_list, &allowed_command))
+  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4))// ||
+      /*(is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6))*/ &&
+      bpf_map_lookup_elem(&allowed_command_list, &allowed_command))
   {
     allow_connect = 0;
   }
 
-  if (bpf_map_lookup_elem(&denied_cidr_list, &key) && bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid))
+  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4))// ||
+      /*(is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6))*/ &&
+      bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid))
   {
     allow_connect = 0;
   }
 
-  if (bpf_map_lookup_elem(&denied_cidr_list, &key) && bpf_map_lookup_elem(&allowed_gid_list, &allowed_gid))
+  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4))// ||
+      /*(is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6))*/ &&
+      bpf_map_lookup_elem(&allowed_gid_list, &allowed_gid))
   {
     allow_connect = 0;
   }
@@ -259,18 +292,18 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
   if (can_access != 0 && c && c->mode == MODE_BLOCK)
   {
     if (is_ipv4) {
-      report_ipv4_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock, (struct sockaddr_in *)inet_addr.ipv4);
+      report_ipv4_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock, (struct sockaddr_in *)inet_addr4);
     } else {
-      report_ipv6_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock, (struct sockaddr_in6 *)inet_addr.ipv6);
+      report_ipv6_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock, (struct sockaddr_in6 *)inet_addr6);
     }
   }
 
   if (c && c->mode == MODE_MONITOR)
   {
     if (is_ipv4) {
-      report_ipv4_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock, (struct sockaddr_in *)inet_addr.ipv4);
+      report_ipv4_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock, (struct sockaddr_in *)inet_addr4);
     } else {
-      report_ipv6_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock, (struct sockaddr_in6 *)inet_addr.ipv6);
+      report_ipv6_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock, (struct sockaddr_in6 *)inet_addr6);
     }
     return 0;
   }
