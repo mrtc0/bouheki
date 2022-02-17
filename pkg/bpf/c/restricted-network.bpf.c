@@ -262,23 +262,26 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     allow_connect = -EPERM;
   }
 
-  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
-      (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6)) &&
-      bpf_map_lookup_elem(&allowed_command_list, &allowed_command))
+  if ((
+        (is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
+        (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6))
+      ) && bpf_map_lookup_elem(&allowed_command_list, &allowed_command))
   {
     allow_connect = 0;
   }
 
-  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
-      (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6)) &&
-      bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid))
+  if ((
+        (is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
+        (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6)) 
+     ) && bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid))
   {
     allow_connect = 0;
   }
 
-  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
-      (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6)) &&
-      bpf_map_lookup_elem(&allowed_gid_list, &allowed_gid))
+  if ((
+        (is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
+        (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6))
+      ) && bpf_map_lookup_elem(&allowed_gid_list, &allowed_gid))
   {
     allow_connect = 0;
   }
@@ -292,18 +295,18 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
   if (can_access != 0 && c && c->mode == MODE_BLOCK)
   {
     if (is_ipv4) {
-      report_ipv4_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock, (struct sockaddr_in *)inet_addr4);
+      report_ipv4_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock, inet_addr4);
     } else {
-      report_ipv6_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock, (struct sockaddr_in6 *)inet_addr6);
+      report_ipv6_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock, inet_addr6);
     }
   }
 
   if (c && c->mode == MODE_MONITOR)
   {
     if (is_ipv4) {
-      report_ipv4_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock, (struct sockaddr_in *)inet_addr4);
+      report_ipv4_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock, inet_addr4);
     } else {
-      report_ipv6_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock, (struct sockaddr_in6 *)inet_addr6);
+      report_ipv6_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock, inet_addr6);
     }
     return 0;
   }
