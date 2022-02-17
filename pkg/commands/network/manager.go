@@ -300,6 +300,15 @@ func (m *Manager) setDeniedCIDRList() error {
 }
 
 func ipToKey(n net.IPNet) []byte {
+  isV6 := n.IP.To4() == nil
+  if isV6 {
+    return ipv6ToKey(n)
+  } else {
+    return ipv4ToKey(n)
+  }
+}
+
+func ipv4ToKey(n net.IPNet) []byte {
 	prefixLen, _ := n.Mask.Size()
 
 	key := make([]byte, 16)
@@ -308,6 +317,17 @@ func ipToKey(n net.IPNet) []byte {
 	copy(key[4:], n.IP)
 
 	return key
+}
+
+func ipv6ToKey(n net.IPNet) []byte {
+  prefixLen, _ := n.Mask.Size()
+  
+  key := make([]byte, 20)
+
+  binary.LittleEndian.PutUint32(key[0:4], uint32(prefixLen))
+  copy(key[4:], n.IP)
+
+  return key
 }
 
 func byteToKey(b []byte) []byte {
