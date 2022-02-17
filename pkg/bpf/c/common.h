@@ -108,6 +108,11 @@ struct ipv6_trie_key
   struct in6_addr addr;
 };
 
+union ip_trie_key {
+  struct ipv4_trie_key v4;
+  struct ipv6_trie_key v6;
+};
+
 struct allowed_command_key
 {
   char comm[TASK_COMM_LEN];

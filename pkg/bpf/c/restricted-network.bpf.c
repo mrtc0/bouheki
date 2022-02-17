@@ -121,18 +121,16 @@ static inline void report_ipv6_event(void *ctx, u64 cg, enum action action, enum
   bpf_ringbuf_output(&audit_events, &ev, sizeof(ev), 0);
 }
 
-// In some cases, such as getaddrinfo(), sin_port is set to 0.
-// Not audited because no communication actually occurs.
-static inline bool is_destination_port_zero_v6(struct sockaddr_in6 *inet_addr)
-{
-  return __builtin_bswap16(inet_addr->sin6_port) == 0;
-}
 
 // In some cases, such as getaddrinfo(), sin_port is set to 0.
 // Not audited because no communication actually occurs.
 static inline bool is_destination_port_zero_v4(struct sockaddr_in *inet_addr)
 {
   return __builtin_bswap16(inet_addr->sin_port) == 0;
+}
+
+static inline bool is_destination_port_zero_v6(struct sockaddr_in6 *inet_addr) {
+  return __builtin_bswap16(inet_addr->sin6_port) == 0;
 }
 
 // TODO: lsm/send_msg
@@ -146,11 +144,9 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
   bool is_ipv6 = (address->sa_family == AF_INET6);
   bool is_ipv4 = (address->sa_family == AF_INET);
 
-  // TODO: support IPv6
   if (!(is_ipv4 || is_ipv6))
     return 0;
 
-  bpf_printk("test\n");
   u64 cg = bpf_get_current_cgroup_id();
 
   struct sockaddr_in *inet_addr4;
@@ -168,15 +164,12 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     return 0;
   }
 
-  struct ipv4_trie_key key4 = {
-    .prefixlen = 32,
-    .addr = inet_addr4->sin_addr
-  };
+  union ip_trie_key key = {.v4.prefixlen = 32, .v4.addr = inet_addr4->sin_addr};
 
-  struct ipv6_trie_key key6 = {
-    .prefixlen = 128,
-    .addr = BPF_CORE_READ(inet_addr6, sin6_addr)
-  };
+  if (is_ipv6) {
+    key.v6.prefixlen = 128;
+    key.v6.addr = BPF_CORE_READ(inet_addr6, sin6_addr);
+  }
 
   struct allowed_command_key allowed_command;
   struct denied_command_key denied_command;
@@ -220,9 +213,8 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     }
   }
 
-  if ((is_ipv4 && bpf_map_lookup_elem(&allowed_v4_cidr_list, &key4)) ||
-      (is_ipv6 && bpf_map_lookup_elem(&allowed_v6_cidr_list, &key6)))
-  {
+  if ((is_ipv4 && bpf_map_lookup_elem(&allowed_v4_cidr_list, &key.v4)) ||
+      (is_ipv6 && bpf_map_lookup_elem(&allowed_v6_cidr_list, &key.v6))) {
     allow_connect = 0;
   }
 
@@ -256,33 +248,26 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     allow_gid = -EPERM;
   }
 
-  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
-      (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6)))
-  {
+  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key.v4)) ||
+      (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key.v6))) {
     allow_connect = -EPERM;
   }
 
-  if ((
-        (is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
-        (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6))
-      ) && bpf_map_lookup_elem(&allowed_command_list, &allowed_command))
-  {
+  if (((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key.v4)) ||
+       (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key.v6))) &&
+      bpf_map_lookup_elem(&allowed_command_list, &allowed_command)) {
     allow_connect = 0;
   }
 
-  if ((
-        (is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
-        (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6)) 
-     ) && bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid))
-  {
+  if (((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key.v4)) ||
+       (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key.v6))) &&
+      bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid)) {
     allow_connect = 0;
   }
 
-  if ((
-        (is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
-        (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6))
-      ) && bpf_map_lookup_elem(&allowed_gid_list, &allowed_gid))
-  {
+  if (((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key.v4)) ||
+       (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key.v6))) &&
+      bpf_map_lookup_elem(&allowed_gid_list, &allowed_gid)) {
     allow_connect = 0;
   }
 
