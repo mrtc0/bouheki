@@ -175,7 +175,7 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 
   struct ipv6_trie_key key6 = {
     .prefixlen = 128,
-    .addr = inet_addr6->sin6_addr
+    .addr = BPF_CORE_READ(inet_addr6, sin6_addr)
   };
 
   struct allowed_command_key allowed_command;
@@ -220,8 +220,8 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     }
   }
 
-  if (is_ipv4 && bpf_map_lookup_elem(&allowed_v4_cidr_list, &key4))// ||
- //     (is_ipv6 && bpf_map_lookup_elem(&allowed_v6_cidr_list, &key6)))
+  if ((is_ipv4 && bpf_map_lookup_elem(&allowed_v4_cidr_list, &key4)) ||
+      (is_ipv6 && bpf_map_lookup_elem(&allowed_v6_cidr_list, &key6)))
   {
     allow_connect = 0;
   }
@@ -256,28 +256,28 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     allow_gid = -EPERM;
   }
 
-  if (is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4))// ||
-//      (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6)))
+  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
+      (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6)))
   {
     allow_connect = -EPERM;
   }
 
-  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4))// ||
-      /*(is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6))*/ &&
+  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
+      (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6)) &&
       bpf_map_lookup_elem(&allowed_command_list, &allowed_command))
   {
     allow_connect = 0;
   }
 
-  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4))// ||
-      /*(is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6))*/ &&
+  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
+      (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6)) &&
       bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid))
   {
     allow_connect = 0;
   }
 
-  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4))// ||
-      /*(is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6))*/ &&
+  if ((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key4)) ||
+      (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key6)) &&
       bpf_map_lookup_elem(&allowed_gid_list, &allowed_gid))
   {
     allow_connect = 0;
