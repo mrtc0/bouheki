@@ -15,7 +15,7 @@ type TestAuditManager struct {
 	cmd     *exec.Cmd
 }
 
-func TestActionResult(t *testing.T) {
+func TestActionResultForV4(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    detectEventIPv4
@@ -65,14 +65,68 @@ func TestActionResult(t *testing.T) {
 	}
 }
 
-func TestAuditBlockMode(t *testing.T) {
-	fixture := "../../../testdata/block.yml"
+func TestActionResultForV6(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    detectEventIPv6
+		expected string
+	}{
+		{
+			name: "Returns 'BLOCKED' iff value `0` is returned",
+			input: detectEventIPv6{
+				SrcIP:        [16]byte{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x44},
+				DstIP:        [16]byte{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x44},
+				DstPort:      80,
+				LsmHookPoint: LSM_HOOK_POINT_CONNECT,
+				Action:       ACTION_BLOCKED,
+				SockType:     TCP,
+			},
+			expected: ACTION_BLOCKED_STRING,
+		},
+		{
+			name: "Returns 'MONITOR' iff value `1` is returned",
+			input: detectEventIPv6{
+				SrcIP:        [16]byte{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x44},
+				DstIP:        [16]byte{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x44},
+				DstPort:      80,
+				LsmHookPoint: LSM_HOOK_POINT_CONNECT,
+				Action:       ACTION_MONITOR,
+				SockType:     TCP,
+			},
+			expected: ACTION_MONITOR_STRING,
+		},
+		{
+			name: "Returns 'unknown' if undefined value is returned.",
+			input: detectEventIPv6{
+				SrcIP:        [16]byte{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x44},
+				DstIP:        [16]byte{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x44},
+				DstPort:      80,
+				LsmHookPoint: LSM_HOOK_POINT_CONNECT,
+				Action:       10,
+				SockType:     TCP,
+			},
+			expected: ACTION_UNKNOWN_STRING,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, test.input.ActionResult())
+		})
+	}
+}
+
+func TestAuditBlockModeV4(t *testing.T) {
+	fixture := "../../../testdata/block_v4.yml"
 	eventsChannel := make(chan []byte)
 	auditManager := runAuditWithOnce(fixture, []string{"curl", "http://93.184.216.34"}, eventsChannel)
 	eventBytes := <-eventsChannel
-	header, body, err := parseEvent(eventBytes)
-
+	header, rawBody, err := parseEvent(eventBytes)
 	assert.Nil(t, err)
+
+	assert.Equal(t, BLOCKED_IPV4, header.EventType)
+
+	body := rawBody.(detectEventIPv4)
+
 	assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
 	assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
 	assert.Equal(t, "93.184.216.34", byte2IPv4(body.DstIP))
@@ -86,17 +140,65 @@ func TestAuditBlockMode(t *testing.T) {
 	auditManager.manager.mod.Close()
 }
 
-func TestAuditMonitorMode(t *testing.T) {
-	fixture := "../../../testdata/monitor.yml"
+func TestAuditBlockModeV6(t *testing.T) {
+	fixture := "../../../testdata/block_v6.yml"
+	eventsChannel := make(chan []byte)
+	auditManager := runAuditWithOnce(fixture, []string{"curl", "-6", "http://[2606:2800:220:1:248:1893:25c8:1946]"}, eventsChannel)
+	eventBytes := <-eventsChannel
+	header, rawBody, err := parseEvent(eventBytes)
+	assert.Nil(t, err)
+
+	assert.Equal(t, BLOCKED_IPV6, header.EventType)
+
+	body := rawBody.(detectEventIPv6)
+
+	assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
+	assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+	assert.Equal(t, "2606:2800:0220:0001:0248:1893:25c8:1946", byte2IPv6(body.DstIP))
+
+	err = exec.Command("curl", "-6", "https://ipv6.google.com").Run()
+	assert.Nil(t, err)
+
+	err = exec.Command("curl", "-6", "http://[2606:2800:220:1:248:1893:25c8:1946]").Run()
+	assert.NotNil(t, err)
+
+	auditManager.manager.mod.Close()
+}
+
+func TestAuditMonitorModeV4(t *testing.T) {
+	fixture := "../../../testdata/monitor_v4.yml"
 	eventsChannel := make(chan []byte)
 	auditManager := runAuditWithOnce(fixture, []string{"curl", "http://93.184.216.34"}, eventsChannel)
 	eventBytes := <-eventsChannel
-	header, body, err := parseEvent(eventBytes)
-
+	header, rawBody, err := parseEvent(eventBytes)
 	assert.Nil(t, err)
+
+	assert.Equal(t, BLOCKED_IPV4, header.EventType)
+
+	body := rawBody.(detectEventIPv4)
+
 	assert.Equal(t, ACTION_MONITOR_STRING, body.ActionResult())
 	assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
 	assert.Equal(t, "93.184.216.34", byte2IPv4(body.DstIP))
+
+	auditManager.manager.mod.Close()
+}
+
+func TestAuditMonitorModeV6(t *testing.T) {
+	fixture := "../../../testdata/monitor_v6.yml"
+	eventsChannel := make(chan []byte)
+	auditManager := runAuditWithOnce(fixture, []string{"curl", "-6", "http://[2606:2800:220:1:248:1893:25c8:1946]"}, eventsChannel)
+	eventBytes := <-eventsChannel
+	header, rawBody, err := parseEvent(eventBytes)
+	assert.Nil(t, err)
+
+	assert.Equal(t, BLOCKED_IPV6, header.EventType)
+
+	body := rawBody.(detectEventIPv6)
+
+	assert.Equal(t, ACTION_MONITOR_STRING, body.ActionResult())
+	assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+	assert.Equal(t, "2606:2800:0220:0001:0248:1893:25c8:1946", byte2IPv6(body.DstIP))
 
 	auditManager.manager.mod.Close()
 }
@@ -140,7 +242,7 @@ func TestAuditContainerBlock(t *testing.T) {
 	commands := []string{"/bin/bash", "-c", "/usr/bin/docker run --rm curlimages/curl@sha256:347bf0095334e390673f532456a60bea7070ef63f2ca02168fee46b867a51aa8 http://93.184.216.34"}
 	auditManager := runAuditWithOnce(fixture, commands, eventsChannel)
 	eventBytes := <-eventsChannel
-	header, body, err := parseEvent(eventBytes)
+	header, rawBody, err := parseEvent(eventBytes)
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -148,6 +250,11 @@ func TestAuditContainerBlock(t *testing.T) {
 	}
 
 	assert.Nil(t, err)
+
+	assert.Equal(t, BLOCKED_IPV4, header.EventType)
+
+	body := rawBody.(detectEventIPv4)
+
 	assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
 	assert.Equal(t, byte2IPv4(body.DstIP), "93.184.216.34")
 	assert.Equal(t, len(nodename2string(header.Nodename)), 12)
