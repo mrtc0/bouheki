@@ -5,7 +5,7 @@ network:
     allow:
       - 0.0.0.0/0
     deny:
-      - 93.184.216.34/32
+      - 10.254.249.3/32
   command:
     allow:
       - curl
