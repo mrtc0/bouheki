@@ -46,5 +46,16 @@ Vagrant.configure("2") do |config|
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
     apt-get update
     apt-get install -y docker-ce docker-ce-cli containerd.io
+
+    # Setup IPv6
+    cat <<EOF >/etc/docker/daemon.json
+{
+  "ipv6": true,
+  "fixed-cidr-v6": "fc00:deed:beef::/24"
+}
+EOF
+    systemctl restart docker
+    curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
   SHELL
 end
