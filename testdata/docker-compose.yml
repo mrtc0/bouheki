@@ -1,0 +1,30 @@
+version: "3"
+services:
+  curl:
+    image: curlimages/curl:7.81.0
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      bouheki_compose_network:
+        ipv4_address: 10.254.249.2
+        ipv6_address: 2001:3984:3989::2
+  nginx-1:
+    image: nginx:1.21.6
+    networks:
+      bouheki_compose_network:
+        ipv4_address: 10.254.249.3
+        ipv6_address: 2001:3984:3989::3
+  nginx-2:
+    image: nginx:1.21.6
+    networks:
+      bouheki_compose_network:
+        ipv4_address: 10.254.249.4
+        ipv6_address: 2001:3984:3989::4
+
+networks:
+  bouheki_compose_network:
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.254.249.1/24
+        - subnet: 2001:3984:3989::/64
