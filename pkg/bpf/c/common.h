@@ -169,9 +169,9 @@ static inline int _is_host_mntns()
 
   current_task = (struct task_struct *)bpf_get_current_task();
 
-  bpf_core_read(&nsproxy, sizeof(nsproxy), &current_task->nsproxy);
-  bpf_core_read(&mnt_ns, sizeof(mnt_ns), &nsproxy->mnt_ns);
-  bpf_core_read(&inum, sizeof(inum), &mnt_ns->ns.inum);
+  BPF_CORE_READ_INTO(&nsproxy, current_task, nsproxy);
+  BPF_CORE_READ_INTO(&mnt_ns, nsproxy, mnt_ns);
+  BPF_CORE_READ_INTO(&inum, mnt_ns, ns.inum);
   if (inum == 0xF0000000)
   {
     return true;

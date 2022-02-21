@@ -64,11 +64,11 @@ static inline void report_ipv4_event(void *ctx, u64 cg, enum action action, enum
   struct nsproxy *nsproxy;
   current_task = (struct task_struct *)bpf_get_current_task();
 
-  bpf_core_read(&nsproxy, sizeof(nsproxy), &current_task->nsproxy);
-  bpf_core_read(&uts_ns, sizeof(uts_ns), &nsproxy->uts_ns);
+  BPF_CORE_READ_INTO(&nsproxy, current_task, nsproxy);
+  BPF_CORE_READ_INTO(&uts_ns, nsproxy, uts_ns);
 
   __builtin_memset(&ev, 0, sizeof(ev));
-  bpf_core_read(&ev.hdr.nodename, sizeof(ev.hdr.nodename), &uts_ns->name.nodename);
+  BPF_CORE_READ_INTO(&ev.hdr.nodename, uts_ns, name.nodename);
 
   ev.hdr.cgroup = cg;
   ev.hdr.pid = (u32)(bpf_get_current_pid_tgid() >> 32);
@@ -96,13 +96,13 @@ static inline void report_ipv6_event(void *ctx, u64 cg, enum action action, enum
   struct uts_namespace *uts_ns;
   struct nsproxy *nsproxy;
   current_task = (struct task_struct *)bpf_get_current_task();
-  
-  bpf_core_read(&nsproxy, sizeof(nsproxy), &current_task->nsproxy);
-  bpf_core_read(&uts_ns, sizeof(uts_ns), &nsproxy->uts_ns);
-  
+
+  BPF_CORE_READ_INTO(&nsproxy, current_task, nsproxy);
+  BPF_CORE_READ_INTO(&uts_ns, nsproxy, uts_ns);
+
   __builtin_memset(&ev, 0, sizeof(ev));
-  bpf_core_read(&ev.hdr.nodename, sizeof(ev.hdr.nodename), &uts_ns->name.nodename);
-  
+  BPF_CORE_READ_INTO(&ev.hdr.nodename, uts_ns, name.nodename);
+
   ev.hdr.cgroup = cg;
   ev.hdr.pid = (u32)(bpf_get_current_pid_tgid() >> 32);
   ev.hdr.type = BLOCKED_IPV6;
