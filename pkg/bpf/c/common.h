@@ -50,11 +50,7 @@ enum action
   ACTION_BLOCK
 };
 
-enum audit_event_type
-{
-  BLOCKED_IPV4,
-  BLOCKED_IPV6 // Not implemented yet.
-};
+enum audit_event_type { BLOCKED_IPV4, BLOCKED_IPV6 };
 
 struct audit_event_header
 {
