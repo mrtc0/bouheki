@@ -21,6 +21,19 @@ func byte2IPv4(addrBytes [4]byte) string {
 	return strings.Join(s, ".")
 }
 
+func byte2IPv6(addrBytes [16]byte) string {
+	var s []string
+	var t string
+	for i, b := range addrBytes {
+		t = t + fmt.Sprintf("%02x", b)
+		if i%2 == 1 {
+			s = append(s, t)
+			t = ""
+		}
+	}
+	return strings.Join(s, ":")
+}
+
 func comm2string(commBytes [16]byte) string {
 	var s string
 	for _, b := range commBytes {

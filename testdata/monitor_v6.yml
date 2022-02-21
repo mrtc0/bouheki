@@ -1,14 +1,11 @@
 network:
-  mode: block
+  mode: monitor 
   target: host
   cidr:
     allow:
       - 0.0.0.0/0
+      - ::/0
     deny:
-      - 10.254.249.3/32
-  command:
-    allow:
-      - curl
-    deny: []
+      - 2606:2800:220:1:248:1893:25c8:1946/128
 log:
   format: json

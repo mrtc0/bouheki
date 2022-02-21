@@ -1,10 +1,11 @@
 network:
-  mode: block 
-  target: container
+  mode: block
+  target: host
   cidr:
     allow:
       - 0.0.0.0/0
+      - ::/0
     deny:
-      - 10.254.249.3/32
+      - 2001:3984:3989::3/128
 log:
   format: json
