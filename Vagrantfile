@@ -28,11 +28,12 @@ Vagrant.configure("2") do |config|
       linux-tools-$(uname -r) \
       ca-certificates \
       gnupg \
-      lsb-release
+      lsb-release \
+      gotestsum
 
     # Setup Golang
     wget https://go.dev/dl/go1.17.5.linux-amd64.tar.gz -O /tmp/go1.17.5.linux-amd64.tar.gz
-    rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.17.5.linux-amd64.tar.gz
+    rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.17.5.linux-amd64.tar.gz && ln -sf /usr/local/go/bin/go /usr/bin/go
     echo "PATH=\$PATH:/usr/local/go/bin" > /etc/profile
     mkdir -p /opt/go/{bin,src}
     echo "GOROOT=/opt/go" >> /etc/profile
