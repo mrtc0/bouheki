@@ -17,9 +17,10 @@ Vagrant.configure("2") do |config|
       curl \
       build-essential \
       libbpf-dev \
-      clang \
+      clang-12 \
       gcc-multilib \
-      llvm \
+      llvm-12 \
+      llvm-12-* \
       zlib1g-dev \
       libelf-dev \
       linux-tools-generic \
@@ -28,14 +29,19 @@ Vagrant.configure("2") do |config|
       linux-tools-$(uname -r) \
       ca-certificates \
       gnupg \
-      lsb-release
+      lsb-release \
+      gotestsum \
+      cmake
 
     # Setup Golang
     wget https://go.dev/dl/go1.17.5.linux-amd64.tar.gz -O /tmp/go1.17.5.linux-amd64.tar.gz
-    rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.17.5.linux-amd64.tar.gz
+    rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.17.5.linux-amd64.tar.gz && ln -sf /usr/local/go/bin/go /usr/bin/go
     echo "PATH=\$PATH:/usr/local/go/bin" > /etc/profile
     mkdir -p /opt/go/{bin,src}
     echo "GOROOT=/opt/go" >> /etc/profile
+
+    # Setup llvm
+    echo "PATH=\$PATH:/usr/lib/llvm-12/bin" >> /etc/profile
 
     # Enable BPF LSM
     sed -i 's/GRUB_CMDLINE_LINUX=\"\"$/GRUB_CMDLINE_LINUX=\"lsm=lockdown,yama,apparmor,bpf\"/' /etc/default/grub

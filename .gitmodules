@@ -1,0 +1,3 @@
+[submodule "bpfcov"]
+	path = bpfcov
+	url = git@github.com:elastic/bpfcov
