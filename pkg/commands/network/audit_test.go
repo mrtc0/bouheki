@@ -276,7 +276,7 @@ func TestAuditMonitorModeDomainV4(t *testing.T) {
 func TestAuditMonitorModeDomainV6(t *testing.T) {
   fixture := "../../../testdata/monitor_domain_v6.yml"
   eventsChannel := make(chan []byte)
-  be_monitord_addr := "2001:3984:3989::3"
+  be_monitord_addr := "2001:3984:3989:0000:0000:0000:0000:0003"
   be_monitord_domain := "nginx-1.v6"
   auditManager := runAuditWithOnce(fixture, []string{"curl", "-6", fmt.Sprintf("http://%s", be_monitord_domain)}, eventsChannel)
   eventBytes := <-eventsChannel

@@ -409,8 +409,12 @@ func (m *Manager) setDeniedDomainList() error {
 func ipToKey(n net.IP) []byte {
   isV6 := n.To4() == nil
   if isV6 {
+    mask := net.CIDRMask(128, 128)
+    n.Mask(mask)
     return ipv6ToKey(n, 128)
   } else {
+    mask := net.CIDRMask(32, 32)
+    n.Mask(mask)
     return ipv4ToKey(n, 32)
   }
 }
