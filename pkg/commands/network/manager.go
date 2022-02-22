@@ -417,7 +417,7 @@ func ipToKey(n net.IP) []byte {
 
 func ipNetToKey(n net.IPNet) []byte {
 	isV6 := n.IP.To4() == nil
-  prefixLen, _ := n.Mask.Size()
+  _, prefixLen := n.Mask.Size()
 	if isV6 {
 		return ipv6ToKey(n.IP, prefixLen)
 	} else {
