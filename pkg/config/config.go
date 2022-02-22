@@ -11,8 +11,14 @@ type NetworkConfig struct {
 	Target  string        `yaml:"target"`
 	Command CommandConfig `yaml:"command"`
 	CIDR    CIDRConfig    `yaml:"cidr"`
+  Domain  DomainConfig  `yaml:"domain"`
 	UID     UIDConfig     `yaml:"uid"`
 	GID     GIDConfig     `yaml:"gid"`
+}
+
+type DomainConfig struct {
+  Allow []string `yaml:"allow"`
+  Deny  []string `yaml:"deny"`
 }
 
 type CIDRConfig struct {
