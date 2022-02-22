@@ -410,12 +410,12 @@ func ipToKey(n net.IP) []byte {
   isV6 := n.To4() == nil
   if isV6 {
     mask := net.CIDRMask(128, 128)
-    n.Mask(mask)
+    n := n.Mask(mask)
     ipnet := net.IPNet{n, mask}
     return ipv6ToKey(ipnet)
   } else {
     mask := net.CIDRMask(32, 32)
-    n.Mask(mask)
+    n := n.Mask(mask)
     ipnet := net.IPNet{n, mask}
     return ipv4ToKey(ipnet)
   }
