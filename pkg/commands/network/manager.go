@@ -411,38 +411,41 @@ func ipToKey(n net.IP) []byte {
   if isV6 {
     mask := net.CIDRMask(128, 128)
     n.Mask(mask)
-    return ipv6ToKey(n, 128)
+    ipnet := net.IPNet{n, mask}
+    return ipv6ToKey(ipnet)
   } else {
     mask := net.CIDRMask(32, 32)
     n.Mask(mask)
-    return ipv4ToKey(n, 32)
+    ipnet := net.IPNet{n, mask}
+    return ipv4ToKey(ipnet)
   }
 }
 
 func ipNetToKey(n net.IPNet) []byte {
 	isV6 := n.IP.To4() == nil
-  _, prefixLen := n.Mask.Size()
 	if isV6 {
-		return ipv6ToKey(n.IP, prefixLen)
+		return ipv6ToKey(n)
 	} else {
-		return ipv4ToKey(n.IP, prefixLen)
+		return ipv4ToKey(n)
 	}
 }
 
-func ipv4ToKey(n net.IP, l int) []byte {
+func ipv4ToKey(n net.IPNet) []byte {
 	key := make([]byte, 16)
+  prefixLen, _ := n.Mask.Size()
 
-	binary.LittleEndian.PutUint32(key[0:4], uint32(l))
-	copy(key[4:], n)
+	binary.LittleEndian.PutUint32(key[0:4], uint32(prefixLen))
+	copy(key[4:], n.IP)
 
 	return key
 }
 
-func ipv6ToKey(n net.IP, l int) []byte {
+func ipv6ToKey(n net.IPNet) []byte {
 	key := make([]byte, 20)
+  prefixLen, _ := n.Mask.Size()
 
-	binary.LittleEndian.PutUint32(key[0:4], uint32(l))
-	copy(key[4:], n)
+	binary.LittleEndian.PutUint32(key[0:4], uint32(prefixLen))
+	copy(key[4:], n.IP)
 
 	return key
 }
