@@ -27,7 +27,9 @@ build: bpf-restricted-network
 .PHONY: test
 test: bpf-restricted-network
 	which gotestsum || go install gotest.tools/gotestsum@latest
+	sudo mount --bind testdata/hosts /etc/hosts
 	CGO_LDFLAGS="-lbpf" sudo -E gotestsum -- --mod=vendor -bench=^$$ -race ./...
+	sudo umount /etc/hosts
 
 .PHONY: release
 release:

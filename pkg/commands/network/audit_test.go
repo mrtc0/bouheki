@@ -196,6 +196,62 @@ func TestAuditBlockModeV6(t *testing.T) {
 	auditManager.manager.mod.Close()
 }
 
+func TestAuditBlockModeDomainV4(t *testing.T) {
+  fixture := "../../../testdata/block_domain_v4.yml"
+  eventsChannel := make(chan []byte)
+  be_blocked_domain := "nginx-1.v4"
+  be_blocked_ip     := "10.254.249.3"
+  be_allowed_domain := "nginx-2.v4"
+  auditManager := runAuditWithOnce(fixture, []string{"curl", fmt.Sprintf("http://%s", be_blocked_domain)}, eventsChannel)
+  eventBytes := <-eventsChannel
+  header, rawBody, err := parseEvent(eventBytes)
+  assert.Nil(t, err)
+
+  assert.Equal(t, BLOCKED_IPV6, header.EventType)
+
+  body := rawBody.(detectEventIPv6)
+
+  assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
+  assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+  assert.Equal(t, bytes.Equal(net.ParseIP(be_blocked_ip), net.ParseIP(byte2IPv6(body.DstIP))), true)
+
+  err = exec.Command("curl", fmt.Sprintf("http://%s", be_allowed_domain)).Run()
+  assert.Nil(t, err)
+
+  err = exec.Command("curl", fmt.Sprintf("http://%s", be_blocked_domain)).Run()
+  assert.NotNil(t, err)
+
+  auditManager.manager.mod.Close()
+}
+
+func TestAuditBlockModeDomainV6(t *testing.T) {
+  fixture := "../../../testdata/block_domain_v6.yml"
+  eventsChannel := make(chan []byte)
+  be_blocked_domain := "nginx-1.v6"
+  be_blocked_ip     := "2001:3984:3989::3"
+  be_allowed_domain := "nginx-2.v6"
+  auditManager := runAuditWithOnce(fixture, []string{"curl", "-6", fmt.Sprintf("http://%s", be_blocked_domain)}, eventsChannel)
+  eventBytes := <-eventsChannel
+  header, rawBody, err := parseEvent(eventBytes)
+  assert.Nil(t, err)
+
+  assert.Equal(t, BLOCKED_IPV6, header.EventType)
+
+  body := rawBody.(detectEventIPv6)
+
+  assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
+  assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+  assert.Equal(t, bytes.Equal(net.ParseIP(be_blocked_ip), net.ParseIP(byte2IPv6(body.DstIP))), true)
+
+  err = exec.Command("curl", "-6", fmt.Sprintf("http://%s", be_allowed_domain)).Run()
+  assert.Nil(t, err)
+
+  err = exec.Command("curl", "-6", fmt.Sprintf("http://%s", be_blocked_domain)).Run()
+  assert.NotNil(t, err)
+
+  auditManager.manager.mod.Close()
+}
+
 func TestAuditMonitorModeV4(t *testing.T) {
 	fixture := "../../../testdata/monitor_v4.yml"
 	eventsChannel := make(chan []byte)
