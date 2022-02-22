@@ -207,13 +207,13 @@ func TestAuditBlockModeDomainV4(t *testing.T) {
   header, rawBody, err := parseEvent(eventBytes)
   assert.Nil(t, err)
 
-  assert.Equal(t, BLOCKED_IPV6, header.EventType)
+  assert.Equal(t, BLOCKED_IPV4, header.EventType)
 
-  body := rawBody.(detectEventIPv6)
+  body := rawBody.(detectEventIPv4)
 
   assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
   assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
-  assert.Equal(t, bytes.Equal(net.ParseIP(be_blocked_ip), net.ParseIP(byte2IPv6(body.DstIP))), true)
+  assert.Equal(t, bytes.Equal(net.ParseIP(be_blocked_ip), net.ParseIP(byte2IPv4(body.DstIP))), true)
 
   err = exec.Command("curl", fmt.Sprintf("http://%s", be_allowed_domain)).Run()
   assert.Nil(t, err)
@@ -248,6 +248,48 @@ func TestAuditBlockModeDomainV6(t *testing.T) {
 
   err = exec.Command("curl", "-6", fmt.Sprintf("http://%s", be_blocked_domain)).Run()
   assert.NotNil(t, err)
+
+  auditManager.manager.mod.Close()
+}
+
+func TestAuditMonitorModeDomainV4(t *testing.T) {
+  fixture := "../../../testdata/monitor_domain_v4.yml"
+  eventsChannel := make(chan []byte)
+  be_monitord_addr := "10.254.249.3"
+  be_monitord_domain := "nginx-1.v4"
+  auditManager := runAuditWithOnce(fixture, []string{"curl", fmt.Sprintf("http://%s", be_monitord_domain)}, eventsChannel)
+  eventBytes := <-eventsChannel
+  header, rawBody, err := parseEvent(eventBytes)
+  assert.Nil(t, err)
+
+  assert.Equal(t, BLOCKED_IPV4, header.EventType)
+
+  body := rawBody.(detectEventIPv4)
+
+  assert.Equal(t, ACTION_MONITOR_STRING, body.ActionResult())
+  assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+  assert.Equal(t, be_monitord_addr, byte2IPv4(body.DstIP))
+
+  auditManager.manager.mod.Close()
+}
+
+func TestAuditMonitorModeDomainV6(t *testing.T) {
+  fixture := "../../../testdata/monitor_domain_v6.yml"
+  eventsChannel := make(chan []byte)
+  be_monitord_addr := "2001:3984:3989::3"
+  be_monitord_domain := "nginx-1.v6"
+  auditManager := runAuditWithOnce(fixture, []string{"curl", "-6", fmt.Sprintf("http://%s", be_monitord_domain)}, eventsChannel)
+  eventBytes := <-eventsChannel
+  header, rawBody, err := parseEvent(eventBytes)
+  assert.Nil(t, err)
+
+  assert.Equal(t, BLOCKED_IPV6, header.EventType)
+
+  body := rawBody.(detectEventIPv6)
+
+  assert.Equal(t, ACTION_MONITOR_STRING, body.ActionResult())
+  assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+  assert.Equal(t, be_monitord_addr, byte2IPv6(body.DstIP))
 
   auditManager.manager.mod.Close()
 }

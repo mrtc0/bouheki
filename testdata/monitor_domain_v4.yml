@@ -1,0 +1,11 @@
+network:
+  mode: monitor 
+  target: host
+  cidr:
+    allow:
+      - 0.0.0.0/0
+  domain:
+    deny:
+      - nginx-1.v4
+log:
+  format: json
