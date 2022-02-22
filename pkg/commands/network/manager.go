@@ -19,8 +19,8 @@ const (
 
 	// BPF Map Names
 	BOUHEKI_CONFIG_MAP_NAME       = "bouheki_config"
-	ALLOWED_V4_CIDR_LIST_MAP      = "allowed_v4_cidr_list"
-	ALLOWED_V6_CIDR_LIST_MAP      = "allowed_v6_cidr_list"
+	ALLOWED_V4_CIDR_LIST_MAP_NAME = "allowed_v4_cidr_list"
+	ALLOWED_V6_CIDR_LIST_MAP_NAME = "allowed_v6_cidr_list"
 	DENIED_V4_CIDR_LIST_MAP_NAME  = "denied_v4_cidr_list"
 	DENIED_V6_CIDR_LIST_MAP_NAME  = "denied_v6_cidr_list"
 	ALLOWED_UID_LIST_MAP_NAME     = "allowed_uid_list"
@@ -64,6 +64,12 @@ func (m *Manager) SetConfigToMap() error {
 	if err := m.setDeniedCIDRList(); err != nil {
 		return err
 	}
+  if err := m.setAllowedDomainList(); err != nil {
+    return err
+  }
+  if err := m.setDeniedDomainList(); err != nil {
+    return err
+  }
 	if err := m.setAllowedCommandList(); err != nil {
 		return err
 	}
@@ -262,12 +268,12 @@ func (m *Manager) setDeniedGIDList() error {
 }
 
 func (m *Manager) setAllowedCIDRList() error {
-	allowed_v4_cidr_list, err := m.mod.GetMap(ALLOWED_V4_CIDR_LIST_MAP)
+	allowed_v4_cidr_list, err := m.mod.GetMap(ALLOWED_V4_CIDR_LIST_MAP_NAME)
 	if err != nil {
 		return err
 	}
 
-	allowed_v6_cidr_list, err := m.mod.GetMap(ALLOWED_V6_CIDR_LIST_MAP)
+	allowed_v6_cidr_list, err := m.mod.GetMap(ALLOWED_V6_CIDR_LIST_MAP_NAME)
 	if err != nil {
 		return err
 	}
@@ -280,12 +286,12 @@ func (m *Manager) setAllowedCIDRList() error {
 
 		isV6 := allowAddresses.IP.To4() == nil
 		if isV6 {
-			err = allowed_v6_cidr_list.Update(ipToKey(*allowAddresses), uint8(0))
+      err = allowed_v6_cidr_list.Update(ipNetToKey(*allowAddresses), uint8(0))
 			if err != nil {
 				return err
 			}
 		} else {
-			err = allowed_v4_cidr_list.Update(ipToKey(*allowAddresses), uint8(0))
+      err = allowed_v4_cidr_list.Update(ipNetToKey(*allowAddresses), uint8(0))
 			if err != nil {
 				return err
 			}
@@ -313,12 +319,12 @@ func (m *Manager) setDeniedCIDRList() error {
 		}
 		isV6 := denyAddresses.IP.To4() == nil
 		if isV6 {
-			err = denied_v6_cidr_list.Update(ipToKey(*denyAddresses), uint8(0))
+      err = denied_v6_cidr_list.Update(ipNetToKey(*denyAddresses), uint8(0))
 			if err != nil {
 				return err
 			}
 		} else {
-			err = denied_v4_cidr_list.Update(ipToKey(*denyAddresses), uint8(0))
+      err = denied_v4_cidr_list.Update(ipNetToKey(*denyAddresses), uint8(0))
 			if err != nil {
 				return err
 			}
@@ -328,33 +334,111 @@ func (m *Manager) setDeniedCIDRList() error {
 	return nil
 }
 
-func ipToKey(n net.IPNet) []byte {
+func (m *Manager) setAllowedDomainList() error {
+  allowed_v4_cidr_list, err := m.mod.GetMap(ALLOWED_V4_CIDR_LIST_MAP_NAME)
+  if err != nil {
+    return err
+  }
+
+  allowed_v6_cidr_list, err := m.mod.GetMap(ALLOWED_V6_CIDR_LIST_MAP_NAME)
+  if err != nil {
+    return err
+  }
+
+  for _, s := range m.config.Network.Domain.Allow {
+    allowAddresses, err := net.LookupIP(s)
+    if err != nil {
+      return err
+    }
+
+    for _, addr := range allowAddresses {
+      isV6 := addr.To4() == nil
+      if isV6 {
+        err = allowed_v6_cidr_list.Update(ipToKey(addr), uint8(0))
+        if err != nil {
+          return err
+        }
+      } else {
+        err = allowed_v4_cidr_list.Update(ipToKey(addr), uint8(0))
+        if err != nil {
+          return err
+        }
+      }
+    }
+  }
+
+  return nil
+}
+
+func (m *Manager) setDeniedDomainList() error {
+  denied_v4_cidr_list, err := m.mod.GetMap(DENIED_V4_CIDR_LIST_MAP_NAME)
+  if err != nil {
+    return err
+  }
+
+  denied_v6_cidr_list, err := m.mod.GetMap(DENIED_V6_CIDR_LIST_MAP_NAME)
+  if err != nil {
+    return err
+  }
+
+  for _, s := range m.config.Network.Domain.Deny {
+    denyAddresses, err := net.LookupIP(s)
+    if err != nil {
+      return err
+    }
+
+    for _, addr := range denyAddresses {
+      isV6 := addr.To4() == nil
+      if isV6 {
+        err = denied_v6_cidr_list.Update(ipToKey(addr), uint8(0))
+        if err != nil {
+          return err
+        }
+      } else {
+        err = denied_v4_cidr_list.Update(ipToKey(addr), uint8(0))
+        if err != nil {
+          return err
+        }
+      }
+    }
+  }
+
+  return nil
+}
+
+func ipToKey(n net.IP) []byte {
+  isV6 := n.To4() == nil
+  if isV6 {
+    return ipv6ToKey(n, 128)
+  } else {
+    return ipv4ToKey(n, 32)
+  }
+}
+
+func ipNetToKey(n net.IPNet) []byte {
 	isV6 := n.IP.To4() == nil
+  prefixLen, _ := n.Mask.Size()
 	if isV6 {
-		return ipv6ToKey(n)
+		return ipv6ToKey(n.IP, prefixLen)
 	} else {
-		return ipv4ToKey(n)
+		return ipv4ToKey(n.IP, prefixLen)
 	}
 }
 
-func ipv4ToKey(n net.IPNet) []byte {
-	prefixLen, _ := n.Mask.Size()
-
+func ipv4ToKey(n net.IP, l int) []byte {
 	key := make([]byte, 16)
 
-	binary.LittleEndian.PutUint32(key[0:4], uint32(prefixLen))
-	copy(key[4:], n.IP)
+	binary.LittleEndian.PutUint32(key[0:4], uint32(l))
+	copy(key[4:], n)
 
 	return key
 }
 
-func ipv6ToKey(n net.IPNet) []byte {
-	prefixLen, _ := n.Mask.Size()
-
+func ipv6ToKey(n net.IP, l int) []byte {
 	key := make([]byte, 20)
 
-	binary.LittleEndian.PutUint32(key[0:4], uint32(prefixLen))
-	copy(key[4:], n.IP)
+	binary.LittleEndian.PutUint32(key[0:4], uint32(l))
+	copy(key[4:], n)
 
 	return key
 }
