@@ -4,6 +4,7 @@ network:
   cidr:
     allow:
       - 0.0.0.0/0
+      - ::/0
   domain:
     deny:
       - nginx-1.v6
