@@ -493,10 +493,10 @@ func createManager(conf *config.Config) Manager {
 	mgr := Manager{
 		mod:    mod,
 		config: conf,
+    cache: make(map[string][]DomainCache),
 	}
 
-  addrMap := make(map[string][]net.IP)
-	err = mgr.SetConfigToMap(addrMap)
+	err = mgr.SetConfigToMap()
 	if err != nil {
 		panic(err)
 	}
