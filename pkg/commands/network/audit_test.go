@@ -252,20 +252,36 @@ func TestAuditBlockModeDomainV6(t *testing.T) {
   auditManager.manager.mod.Close()
 }
 
-func TestAuditDomainUpdate(t *testing.T) {
+func TestAuditDomainUpdateV4(t *testing.T) {
   fixture := "../../../testdata/block_domain_v4.yml"
   eventsChannel := make(chan []byte)
   auditManager := runAuditWithOnce(fixture, []string{"echo", "test"}, eventsChannel) 
-  exec.Command("sed", "'s/10\\.254\\.249\\.3/10\\.254\\.249\\.4/g'", "../../../testdata/hosts").Run()
-  time.Sleep(time.Second * 7)
+  exec.Command("sed", "'s/249\\.3/249\\.4/g'", "../../../testdata/hosts").Run()
+  time.Sleep(time.Second * 10)
   denied_v4_cidr_list, err := auditManager.manager.mod.GetMap(DENIED_V4_CIDR_LIST_MAP_NAME)
   assert.Nil(t, err)
-  _, err = denied_v4_cidr_list.GetValue(ipToKey(net.IPv4(10, 254, 249, 3)), 1)
+  _, err = denied_v4_cidr_list.GetValue(ipToKey(net.ParseIP("10.254.249.3")), 1)
   assert.NotNil(t, err)
-  value, err := denied_v4_cidr_list.GetValue(ipToKey(net.IPv4(10, 254, 249, 4)), 1)
+  value, err := denied_v4_cidr_list.GetValue(ipToKey(net.ParseIP("10.254.249.4")), 1)
   assert.Nil(t, err)
   assert.Equal(t, len(value), 0)
-  exec.Command("cp", "../../../testdata/hosts.bk", "../../../testdata/hosts").Run()
+  defer exec.Command("cp", "../../../testdata/hosts.bk", "../../../testdata/hosts").Run()
+}
+
+func TestAuditDomainUpdateV6(t *testing.T) {
+  fixture := "../../../testdata/block_domain_v6.yml"
+  eventsChannel := make(chan []byte)
+  auditManager := runAuditWithOnce(fixture, []string{"echo", "test"}, eventsChannel) 
+  exec.Command("sed", "'s/::3/::4/g'", "../../../testdata/hosts").Run()
+  time.Sleep(time.Second * 10)
+  denied_v6_cidr_list, err := auditManager.manager.mod.GetMap(DENIED_V6_CIDR_LIST_MAP_NAME)
+  assert.Nil(t, err)
+  _, err = denied_v6_cidr_list.GetValue(ipToKey(net.ParseIP("2001:3984:3989::3")), 1)
+  assert.NotNil(t, err)
+  value, err := denied_v6_cidr_list.GetValue(ipToKey(net.ParseIP("2001:3984:3989::4")), 1)
+  assert.Nil(t, err)
+  assert.Equal(t, len(value), 0)
+  defer exec.Command("cp", "../../../testdata/hosts.bk", "../../../testdata/hosts").Run()
 }
 
 func TestAuditMonitorModeDomainV4(t *testing.T) {
