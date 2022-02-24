@@ -373,9 +373,13 @@ func (m *Manager) setAllowedDomainList() error {
         log.Debug("deleting old key")
         for _, oldKey := range caches {
           if oldKey.isV6 {
-            allowed_v6_cidr_list.DeleteKey(oldKey.key)
+            if err := allowed_v6_cidr_list.DeleteKey(oldKey.key); err != nil {
+              return err
+            }
           } else {
-            allowed_v4_cidr_list.DeleteKey(oldKey.key)
+            if err := allowed_v4_cidr_list.DeleteKey(oldKey.key); err != nil {
+              return err
+            }
           }
         }
       } else {
@@ -397,9 +401,10 @@ func (m *Manager) setAllowedDomainList() error {
           return err
         }
       }
-      m.cache[s] = append(m.cache[s], DomainCache{key, isV6})
+      m.cache[s] = []DomainCache{DomainCache{key, isV6}}
     }
   }
+  log.Debug("update done")
 
   return nil
 }
@@ -436,9 +441,13 @@ func (m *Manager) setDeniedDomainList() error {
         log.Debug("deleting old key")
         for _, oldKey := range caches {
           if oldKey.isV6 {
-            denied_v6_cidr_list.DeleteKey(oldKey.key)
+            if err := denied_v6_cidr_list.DeleteKey(oldKey.key); err != nil {
+              return err
+            }
           } else {
-            denied_v4_cidr_list.DeleteKey(oldKey.key)
+            if err := denied_v4_cidr_list.DeleteKey(oldKey.key); err != nil {
+              return err
+            }
           }
         }
       } else {
@@ -460,9 +469,10 @@ func (m *Manager) setDeniedDomainList() error {
           return err
         }
       }
-      m.cache[s] = append(m.cache[s], DomainCache{key, isV6})
+      m.cache[s] = []DomainCache{DomainCache{key, isV6}}
     }
   }
+  log.Debug("update done")
 
   return nil
 }
