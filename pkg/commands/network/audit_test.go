@@ -255,7 +255,7 @@ func TestAuditBlockModeDomainV6(t *testing.T) {
 func TestAuditDomainUpdateV4(t *testing.T) {
   fixture := "../../../testdata/block_domain_v4.yml"
   eventsChannel := make(chan []byte)
-  auditManager := runAuditWithOnce(fixture, []string{"echo", "test"}, eventsChannel) 
+  auditManager := runAuditWithUpdate(fixture, []string{"echo", "test"}, eventsChannel) 
   exec.Command("sed", "'s/249\\.3/249\\.4/g'", "../../../testdata/hosts").Run()
   time.Sleep(time.Second * 10)
   denied_v4_cidr_list, err := auditManager.manager.mod.GetMap(DENIED_V4_CIDR_LIST_MAP_NAME)
@@ -271,7 +271,7 @@ func TestAuditDomainUpdateV4(t *testing.T) {
 func TestAuditDomainUpdateV6(t *testing.T) {
   fixture := "../../../testdata/block_domain_v6.yml"
   eventsChannel := make(chan []byte)
-  auditManager := runAuditWithOnce(fixture, []string{"echo", "test"}, eventsChannel) 
+  auditManager := runAuditWithUpdate(fixture, []string{"echo", "test"}, eventsChannel) 
   exec.Command("sed", "'s/::3/::4/g'", "../../../testdata/hosts").Run()
   time.Sleep(time.Second * 10)
   denied_v6_cidr_list, err := auditManager.manager.mod.GetMap(DENIED_V6_CIDR_LIST_MAP_NAME)
@@ -492,6 +492,29 @@ func runAuditWithOnce(configPath string, execCmd []string, eventsChannel chan []
 		manager: mgr,
 		cmd:     cmd,
 	}
+}
+
+func runAuditWithUpdate(configPath string, execCmd []string, eventsChannel chan []byte) TestAuditManager {
+  config := loadFixtureConfig(configPath)
+  mgr := createManager(config)
+
+  mgr.Start(eventsChannel)
+
+  UpdateDomainList(mgr)
+
+  cmd := exec.Command(execCmd[0], execCmd[1:]...)
+  err := cmd.Start()
+
+  if err != nil {
+    panic(err)
+  }
+
+  cmd.Wait()
+
+  return TestAuditManager{
+    manager: mgr,
+    cmd:     cmd,
+  }
 }
 
 func loadFixtureConfig(path string) *config.Config {
