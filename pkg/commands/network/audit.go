@@ -14,6 +14,7 @@ import (
 )
 
 const (
+  UPDATE_INTERVAL = 5
 	TASK_COMM_LEN = 16
 	NEW_UTS_LEN   = 64
 	PADDING_LEN   = 7
@@ -110,6 +111,18 @@ func setupBPFProgram() (*libbpfgo.Module, error) {
 	return mod, nil
 }
 
+func UpdateDomainList(mgr Manager) {
+  for {
+    time.Sleep(time.Second * UPDATE_INTERVAL)
+    if err := mgr.setAllowedDomainList(); err != nil {
+      log.Fatal(err)
+    }
+    if err := mgr.setDeniedDomainList(); err != nil {
+      log.Fatal(err)
+    }
+  }
+}
+
 func RunAudit(conf *config.Config) {
 	mod, err := setupBPFProgram()
 	if err != nil {
@@ -132,17 +145,7 @@ func RunAudit(conf *config.Config) {
 	eventsChannel := make(chan []byte)
 	mgr.Start(eventsChannel)
   
-  go func() {
-    for {
-      time.Sleep(time.Second * 5)
-      if err := mgr.setAllowedDomainList(); err != nil {
-        log.Fatal(err)
-      }
-      if err := mgr.setDeniedDomainList(); err != nil {
-        log.Fatal(err)
-      }
-    }
-  }()
+  go UpdateDomainList(mgr)
 
 	for {
 		eventBytes := <-eventsChannel
