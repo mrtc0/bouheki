@@ -256,14 +256,16 @@ func TestAuditDomainUpdate(t *testing.T) {
   fixture := "../../../testdata/block_domain_v4.yml"
   eventsChannel := make(chan []byte)
   auditManager := runAuditWithOnce(fixture, []string{"echo", "test"}, eventsChannel) 
-  exec.Command("sed", "'s/10\\.254\\.249\\.3/10\\.254\\.249\\.4/g'", "../../../hosts")
+  exec.Command("sed", "'s/10\\.254\\.249\\.3/10\\.254\\.249\\.4/g'", "../../../testdata/hosts").Run()
   time.Sleep(time.Second * 7)
   denied_v4_cidr_list, err := auditManager.manager.mod.GetMap(DENIED_V4_CIDR_LIST_MAP_NAME)
   assert.Nil(t, err)
+  _, err = denied_v4_cidr_list.GetValue(ipToKey(net.IPv4(10, 254, 249, 3)), 1)
+  assert.NotNil(t, err)
   value, err := denied_v4_cidr_list.GetValue(ipToKey(net.IPv4(10, 254, 249, 4)), 1)
   assert.Nil(t, err)
   assert.Equal(t, len(value), 0)
-  exec.Command("cp", "../../../testdata/hosts.bk", "../../../testdata/hosts")
+  exec.Command("cp", "../../../testdata/hosts.bk", "../../../testdata/hosts").Run()
 }
 
 func TestAuditMonitorModeDomainV4(t *testing.T) {
