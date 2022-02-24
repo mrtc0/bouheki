@@ -358,20 +358,26 @@ func (m *Manager) setAllowedDomainList() error {
       return err
     }
 
-    oldKeys, has := m.cache[s]
+    caches, has := m.cache[s]
     if has {
+      log.Debug("hit cache")
       newKeys := make([][]byte, 2)
       for _, addr := range allowAddresses {
         newKeys = append(newKeys, ipToKey(addr))
       }
+      oldKeys := make([][]byte, 2)
+      for _, cache:= range caches {
+         oldKeys = append(oldKeys, cache.key)
+      }
       if !reflect.DeepEqual(oldKeys, newKeys) {
-        for _, oldKey := range oldKeys {
+        log.Debug("deleting old key")
+        for _, oldKey := range caches {
           if oldKey.isV6 {
-            if err := allowed_v6_cidr_list.DeleteKey(oldKey); err != nil {
+            if err := allowed_v6_cidr_list.DeleteKey(oldKey.key); err != nil {
               return err
             }
           } else {
-            if err := allowed_v4_cidr_list.DeleteKey(oldKey); err != nil {
+            if err := allowed_v4_cidr_list.DeleteKey(oldKey.key); err != nil {
               return err
             }
           }
@@ -419,20 +425,26 @@ func (m *Manager) setDeniedDomainList() error {
       return err
     }
 
-    oldKeys, has := m.cache[s]
+    caches, has := m.cache[s]
+    oldKeys := make([][]byte, 2)
+    for _, cache:= range caches {
+       oldKeys = append(oldKeys, cache.key)
+    }
     if has {
+      log.Debug("hit cache")
       newKeys := make([][]byte, 2)
       for _, addr := range denyAddresses {
         newKeys = append(newKeys, ipToKey(addr))
       }
       if !reflect.DeepEqual(oldKeys, newKeys) {
-        for _, oldKey := range oldKeys {
+        log.Debug("deleting old key")
+        for _, oldKey := range caches {
           if oldKey.isV6 {
-            if err := denied_v6_cidr_list.DeleteKey(oldKey); err != nil {
+            if err := denied_v6_cidr_list.DeleteKey(oldKey.key); err != nil {
               return err
             }
           } else {
-            if err := denied_v4_cidr_list.DeleteKey(oldKey); err != nil {
+            if err := denied_v4_cidr_list.DeleteKey(oldKey.key); err != nil {
               return err
             }
           }
