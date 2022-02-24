@@ -3,6 +3,8 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+  "net"
+  "time"
 
 	"github.com/mrtc0/bouheki/pkg/bpf"
 	"github.com/mrtc0/bouheki/pkg/config"
@@ -120,13 +122,27 @@ func RunAudit(conf *config.Config) {
 		config: conf,
 	}
 
-	err = mgr.SetConfigToMap()
+  domainMap := make(map[string][]net.IP)
+
+	err = mgr.SetConfigToMap(domainMap)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	eventsChannel := make(chan []byte)
 	mgr.Start(eventsChannel)
+  
+  go func() {
+    for {
+      time.Sleep(time.Second * 5)
+      if err := mgr.setAllowedDomainList(domainMap); err != nil {
+        log.Fatal(err)
+      }
+      if err := mgr.setDeniedDomainList(domainMap); err != nil {
+        log.Fatal(err)
+      }
+    }
+  }()
 
 	for {
 		eventBytes := <-eventsChannel
