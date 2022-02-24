@@ -352,9 +352,12 @@ func (m *Manager) setAllowedDomainList(domainMap map[string][]net.IP) error {
       return err
     }
 
+    // TODO insert map
     oldAddrs, has := domainMap[s]
     if has {
+      log.Debug("found old domain")
       if !reflect.DeepEqual(oldAddrs, allowAddresses) {
+      log.Debug("deleting old key")
         for _, oldAddr := range oldAddrs {
           isV6 := oldAddr.To4() == nil
           if isV6 {
@@ -372,6 +375,8 @@ func (m *Manager) setAllowedDomainList(domainMap map[string][]net.IP) error {
       } else {
         return nil
       }
+    } else {
+      domainMap[s] = allowAddresses
     }
 
     for _, addr := range allowAddresses {
@@ -430,6 +435,8 @@ func (m *Manager) setDeniedDomainList(domainMap map[string][]net.IP) error {
       } else {
         return nil
       }
+    } else {
+      domainMap[s] = denyAddresses
     }
 
     for _, addr := range denyAddresses {
