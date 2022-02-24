@@ -3,7 +3,6 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
-  "net"
   "time"
 
 	"github.com/mrtc0/bouheki/pkg/bpf"
@@ -117,14 +116,15 @@ func RunAudit(conf *config.Config) {
 		log.Fatal(err)
 	}
 
+  cache := make(map[string][]DomainCache)
+
 	mgr := Manager{
 		mod:    mod,
 		config: conf,
+    cache: cache,
 	}
 
-  domainMap := make(map[string][]net.IP)
-
-	err = mgr.SetConfigToMap(domainMap)
+	err = mgr.SetConfigToMap()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -135,10 +135,10 @@ func RunAudit(conf *config.Config) {
   go func() {
     for {
       time.Sleep(time.Second * 5)
-      if err := mgr.setAllowedDomainList(domainMap); err != nil {
+      if err := mgr.setAllowedDomainList(); err != nil {
         log.Fatal(err)
       }
-      if err := mgr.setDeniedDomainList(domainMap); err != nil {
+      if err := mgr.setDeniedDomainList(); err != nil {
         log.Fatal(err)
       }
     }

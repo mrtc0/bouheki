@@ -53,9 +53,15 @@ type Manager struct {
 	mod    *libbpfgo.Module
 	config *config.Config
 	rb     *libbpfgo.RingBuffer
+  cache  map[string][]DomainCache
 }
 
-func (m *Manager) SetConfigToMap(domainMap map[string][]net.IP) error {
+type DomainCache struct {
+  key   []byte
+  isV6  bool
+}
+
+func (m *Manager) SetConfigToMap() error {
 	if err := m.setConfigMap(); err != nil {
 		return err
 	}
@@ -65,10 +71,10 @@ func (m *Manager) SetConfigToMap(domainMap map[string][]net.IP) error {
 	if err := m.setDeniedCIDRList(); err != nil {
 		return err
 	}
-  if err := m.setAllowedDomainList(domainMap); err != nil {
+  if err := m.setAllowedDomainList(); err != nil {
     return err
   }
-  if err := m.setDeniedDomainList(domainMap); err != nil {
+  if err := m.setDeniedDomainList(); err != nil {
     return err
   }
 	if err := m.setAllowedCommandList(); err != nil {
@@ -335,7 +341,7 @@ func (m *Manager) setDeniedCIDRList() error {
 	return nil
 }
 
-func (m *Manager) setAllowedDomainList(domainMap map[string][]net.IP) error {
+func (m *Manager) setAllowedDomainList() error {
   allowed_v4_cidr_list, err := m.mod.GetMap(ALLOWED_V4_CIDR_LIST_MAP_NAME)
   if err != nil {
     return err
@@ -352,22 +358,20 @@ func (m *Manager) setAllowedDomainList(domainMap map[string][]net.IP) error {
       return err
     }
 
-    // TODO insert map
-    oldAddrs, has := domainMap[s]
+    oldKeys, has := m.cache[s]
     if has {
-      log.Debug("found old domain")
-      if !reflect.DeepEqual(oldAddrs, allowAddresses) {
-      log.Debug("deleting old key")
-        for _, oldAddr := range oldAddrs {
-          isV6 := oldAddr.To4() == nil
-          if isV6 {
-            err = allowed_v6_cidr_list.DeleteKey(ipToKey(oldAddr))
-            if err != nil {
+      newKeys := make([][]byte, 2)
+      for _, addr := range allowAddresses {
+        newKeys = append(newKeys, ipToKey(addr))
+      }
+      if !reflect.DeepEqual(oldKeys, newKeys) {
+        for _, oldKey := range oldKeys {
+          if oldKey.isV6 {
+            if err := allowed_v6_cidr_list.DeleteKey(oldKey); err != nil {
               return err
             }
           } else {
-            err = allowed_v4_cidr_list.DeleteKey(ipToKey(oldAddr))
-            if err != nil {
+            if err := allowed_v4_cidr_list.DeleteKey(oldKey); err != nil {
               return err
             }
           }
@@ -375,30 +379,30 @@ func (m *Manager) setAllowedDomainList(domainMap map[string][]net.IP) error {
       } else {
         return nil
       }
-    } else {
-      domainMap[s] = allowAddresses
     }
 
     for _, addr := range allowAddresses {
       isV6 := addr.To4() == nil
+      key := ipToKey(addr)
       if isV6 {
-        err = allowed_v6_cidr_list.Update(ipToKey(addr), uint8(0))
+        err = allowed_v6_cidr_list.Update(key, uint8(0))
         if err != nil {
           return err
         }
       } else {
-        err = allowed_v4_cidr_list.Update(ipToKey(addr), uint8(0))
+        err = allowed_v4_cidr_list.Update(key, uint8(0))
         if err != nil {
           return err
         }
       }
+      m.cache[s] = append(m.cache[s], DomainCache{key, isV6})
     }
   }
 
   return nil
 }
 
-func (m *Manager) setDeniedDomainList(domainMap map[string][]net.IP) error {
+func (m *Manager) setDeniedDomainList() error {
   denied_v4_cidr_list, err := m.mod.GetMap(DENIED_V4_CIDR_LIST_MAP_NAME)
   if err != nil {
     return err
@@ -415,19 +419,20 @@ func (m *Manager) setDeniedDomainList(domainMap map[string][]net.IP) error {
       return err
     }
 
-    oldAddrs, has := domainMap[s]
+    oldKeys, has := m.cache[s]
     if has {
-      if !reflect.DeepEqual(oldAddrs, denyAddresses) {
-        for _, oldAddr := range oldAddrs {
-          isV6 := oldAddr.To4() == nil
-          if isV6 {
-            err = denied_v6_cidr_list.DeleteKey(ipToKey(oldAddr))
-            if err != nil {
+      newKeys := make([][]byte, 2)
+      for _, addr := range denyAddresses {
+        newKeys = append(newKeys, ipToKey(addr))
+      }
+      if !reflect.DeepEqual(oldKeys, newKeys) {
+        for _, oldKey := range oldKeys {
+          if oldKey.isV6 {
+            if err := denied_v6_cidr_list.DeleteKey(oldKey); err != nil {
               return err
             }
           } else {
-            err = denied_v4_cidr_list.DeleteKey(ipToKey(oldAddr))
-            if err != nil {
+            if err := denied_v4_cidr_list.DeleteKey(oldKey); err != nil {
               return err
             }
           }
@@ -435,23 +440,23 @@ func (m *Manager) setDeniedDomainList(domainMap map[string][]net.IP) error {
       } else {
         return nil
       }
-    } else {
-      domainMap[s] = denyAddresses
     }
 
     for _, addr := range denyAddresses {
       isV6 := addr.To4() == nil
+      key := ipToKey(addr)
       if isV6 {
-        err = denied_v6_cidr_list.Update(ipToKey(addr), uint8(0))
+        err = denied_v6_cidr_list.Update(key, uint8(0))
         if err != nil {
           return err
         }
       } else {
-        err = denied_v4_cidr_list.Update(ipToKey(addr), uint8(0))
+        err = denied_v4_cidr_list.Update(key, uint8(0))
         if err != nil {
           return err
         }
       }
+      m.cache[s] = append(m.cache[s], DomainCache{key, isV6})
     }
   }
 
