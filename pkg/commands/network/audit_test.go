@@ -254,33 +254,91 @@ func TestAuditBlockModeDomainV6(t *testing.T) {
 
 func TestAuditDomainUpdateV4(t *testing.T) {
   fixture := "../../../testdata/block_domain_v4.yml"
+  be_blocked_ip := "10.254.249.3"
+  be_allowed_ip := "10.254.249.4"
   eventsChannel := make(chan []byte)
-  auditManager := runAuditWithUpdate(fixture, []string{"echo", "test"}, eventsChannel) 
-  exec.Command("sed", "'s/249\\.3/249\\.4/g'", "../../../testdata/hosts").Run()
-  time.Sleep(time.Second * 10)
-  denied_v4_cidr_list, err := auditManager.manager.mod.GetMap(DENIED_V4_CIDR_LIST_MAP_NAME)
+  auditManager := runAuditWithOnce(fixture, []string{"curl", fmt.Sprintf("http://%s", be_blocked_ip)}, eventsChannel) 
+  eventBytes := <-eventsChannel
+  header, rawBody, err := parseEvent(eventBytes)
   assert.Nil(t, err)
-  _, err = denied_v4_cidr_list.GetValue(ipToKey(net.ParseIP("10.254.249.3")), 1)
-  assert.NotNil(t, err)
-  value, err := denied_v4_cidr_list.GetValue(ipToKey(net.ParseIP("10.254.249.4")), 1)
+
+  assert.Equal(t, BLOCKED_IPV4, header.EventType)
+
+  body := rawBody.(detectEventIPv4)
+
+  assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
+  assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+  assert.Equal(t, bytes.Equal(net.ParseIP(be_blocked_ip), net.ParseIP(byte2IPv4(body.DstIP))), true)
+
+  err = exec.Command("curl", fmt.Sprintf("http://%s", be_allowed_ip)).Run()
   assert.Nil(t, err)
-  assert.Equal(t, len(value), 0)
+
+  exec.Command("sed", "-i", "'s/249\\.3/249\\.4/g'", "../../../testdata/hosts").Run()
+  err = auditManager.manager.setDeniedDomainList()
+  assert.Nil(t, err)
+  err = auditManager.manager.setAllowedDomainList()
+  assert.Nil(t, err)
+
+  auditManager = runAuditWithOnce(fixture, []string{"curl", fmt.Sprintf("http://%s", be_allowed_ip)}, eventsChannel) 
+  eventBytes = <-eventsChannel
+  header, rawBody, err = parseEvent(eventBytes)
+  assert.Nil(t, err)
+
+  assert.Equal(t, BLOCKED_IPV4, header.EventType)
+
+  body = rawBody.(detectEventIPv4)
+
+  assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
+  assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+  assert.Equal(t, bytes.Equal(net.ParseIP(be_allowed_ip), net.ParseIP(byte2IPv4(body.DstIP))), true)
+  
+  auditManager.manager.mod.Close()
+
   defer exec.Command("cp", "../../../testdata/hosts.bk", "../../../testdata/hosts").Run()
 }
 
 func TestAuditDomainUpdateV6(t *testing.T) {
   fixture := "../../../testdata/block_domain_v6.yml"
+  be_blocked_ip := "2001:3984:3989::3"
+  be_allowed_ip := "2001:3984:3989::4"
   eventsChannel := make(chan []byte)
-  auditManager := runAuditWithUpdate(fixture, []string{"echo", "test"}, eventsChannel) 
-  exec.Command("sed", "'s/::3/::4/g'", "../../../testdata/hosts").Run()
-  time.Sleep(time.Second * 10)
-  denied_v6_cidr_list, err := auditManager.manager.mod.GetMap(DENIED_V6_CIDR_LIST_MAP_NAME)
+  auditManager := runAuditWithOnce(fixture, []string{"curl", "-6", fmt.Sprintf("http://[%s]", be_blocked_ip)}, eventsChannel) 
+  eventBytes := <-eventsChannel
+  header, rawBody, err := parseEvent(eventBytes)
   assert.Nil(t, err)
-  _, err = denied_v6_cidr_list.GetValue(ipToKey(net.ParseIP("2001:3984:3989::3")), 1)
-  assert.NotNil(t, err)
-  value, err := denied_v6_cidr_list.GetValue(ipToKey(net.ParseIP("2001:3984:3989::4")), 1)
+
+  assert.Equal(t, BLOCKED_IPV6, header.EventType)
+
+  body := rawBody.(detectEventIPv6)
+
+  assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
+  assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+  assert.Equal(t, bytes.Equal(net.ParseIP(be_blocked_ip), net.ParseIP(byte2IPv6(body.DstIP))), true)
+
+  err = exec.Command("curl", "-6", fmt.Sprintf("http://[%s]", be_allowed_ip)).Run()
   assert.Nil(t, err)
-  assert.Equal(t, len(value), 0)
+
+  exec.Command("sed", "-i", "'s/::3/::4/g'", "../../../testdata/hosts").Run()
+  err = auditManager.manager.setDeniedDomainList()
+  assert.Nil(t, err)
+  err = auditManager.manager.setAllowedDomainList()
+  assert.Nil(t, err)
+
+  auditManager = runAuditWithOnce(fixture, []string{"curl", "-6", fmt.Sprintf("http://[%s]", be_allowed_ip)}, eventsChannel) 
+  eventBytes = <-eventsChannel
+  header, rawBody, err = parseEvent(eventBytes)
+  assert.Nil(t, err)
+
+  assert.Equal(t, BLOCKED_IPV6, header.EventType)
+
+  body = rawBody.(detectEventIPv6)
+
+  assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
+  assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+  assert.Equal(t, bytes.Equal(net.ParseIP(be_allowed_ip), net.ParseIP(byte2IPv6(body.DstIP))), true)
+  
+  auditManager.manager.mod.Close()
+
   defer exec.Command("cp", "../../../testdata/hosts.bk", "../../../testdata/hosts").Run()
 }
 
@@ -492,29 +550,6 @@ func runAuditWithOnce(configPath string, execCmd []string, eventsChannel chan []
 		manager: mgr,
 		cmd:     cmd,
 	}
-}
-
-func runAuditWithUpdate(configPath string, execCmd []string, eventsChannel chan []byte) TestAuditManager {
-  config := loadFixtureConfig(configPath)
-  mgr := createManager(config)
-
-  mgr.Start(eventsChannel)
-
-  UpdateDomainList(mgr)
-
-  cmd := exec.Command(execCmd[0], execCmd[1:]...)
-  err := cmd.Start()
-
-  if err != nil {
-    panic(err)
-  }
-
-  cmd.Wait()
-
-  return TestAuditManager{
-    manager: mgr,
-    cmd:     cmd,
-  }
 }
 
 func loadFixtureConfig(path string) *config.Config {
