@@ -19,7 +19,7 @@ type NetworkConfig struct {
 type DomainConfig struct {
 	Allow    []string `yaml:"allow"`
 	Deny     []string `yaml:"deny"`
-	Interval uint     `default:"4" yaml:"interval"` // source: https://xkcd.com/221/
+	Interval uint     `yaml:"interval"`
 }
 
 type CIDRConfig struct {
@@ -61,6 +61,7 @@ func defaultConfig() *Config {
 			Target:  "host",
 			Command: CommandConfig{Allow: []string{}, Deny: []string{}},
 			CIDR:    CIDRConfig{Allow: []string{"0.0.0.0/0"}, Deny: []string{}},
+			Domain:  DomainConfig{Allow: []string{}, Deny: []string{}, Interval: 4}, // source: https://xkcd.com/221/
 			UID:     UIDConfig{Allow: []uint{}, Deny: []uint{}},
 			GID:     GIDConfig{Allow: []uint{}, Deny: []uint{}},
 		},
