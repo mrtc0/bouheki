@@ -17,8 +17,9 @@ type NetworkConfig struct {
 }
 
 type DomainConfig struct {
-	Allow []string `yaml:"allow"`
-	Deny  []string `yaml:"deny"`
+	Allow    []string `yaml:"allow"`
+	Deny     []string `yaml:"deny"`
+	Interval uint     `default:"4" yaml:"interval"` // source: https://xkcd.com/221/
 }
 
 type CIDRConfig struct {

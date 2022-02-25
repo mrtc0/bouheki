@@ -14,14 +14,13 @@ import (
 )
 
 const (
-	UPDATE_INTERVAL = 5
-	TASK_COMM_LEN   = 16
-	NEW_UTS_LEN     = 64
-	PADDING_LEN     = 7
-	SRCIP_V4_LEN    = 4
-	DSTIP_V4_LEN    = 4
-	SRCIP_V6_LEN    = 16
-	DSTIP_V6_LEN    = 16
+	TASK_COMM_LEN = 16
+	NEW_UTS_LEN   = 64
+	PADDING_LEN   = 7
+	SRCIP_V4_LEN  = 4
+	DSTIP_V4_LEN  = 4
+	SRCIP_V6_LEN  = 16
+	DSTIP_V6_LEN  = 16
 
 	ACTION_MONITOR        uint8 = 0
 	ACTION_BLOCKED        uint8 = 1
@@ -113,7 +112,7 @@ func setupBPFProgram() (*libbpfgo.Module, error) {
 
 func UpdateDomainList(mgr Manager) {
 	for {
-		time.Sleep(time.Second * UPDATE_INTERVAL)
+		time.Sleep(time.Second * time.Duration(mgr.config.Network.Domain.Interval))
 		if err := mgr.setAllowedDomainList(); err != nil {
 			log.Fatal(err)
 		}
