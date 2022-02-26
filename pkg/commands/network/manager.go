@@ -62,8 +62,25 @@ type DomainCache struct {
 }
 
 type IPAddress struct {
-	address net.IP
-	key     []byte
+	address  net.IP
+	cidrMask net.IPMask
+	key      []byte
+}
+
+func (i *IPAddress) isV6address() bool {
+	return i.address.To4() == nil
+}
+
+func (i *IPAddress) ipAddressToBPFMapKey() []byte {
+	ip := net.IPNet{IP: i.address.Mask(i.cidrMask), Mask: i.cidrMask}
+
+	if i.isV6address() {
+		i.key = ipv6ToKey(ip)
+	} else {
+		i.key = ipv4ToKey(ip)
+	}
+
+	return i.key
 }
 
 type DNSResolver interface {
@@ -290,30 +307,18 @@ func (m *Manager) setDeniedGIDList() error {
 }
 
 func (m *Manager) setAllowedCIDRList() error {
-	allowed_v4_cidr_list, err := m.mod.GetMap(ALLOWED_V4_CIDR_LIST_MAP_NAME)
-	if err != nil {
-		return err
-	}
-
-	allowed_v6_cidr_list, err := m.mod.GetMap(ALLOWED_V6_CIDR_LIST_MAP_NAME)
-	if err != nil {
-		return err
-	}
-
-	for _, s := range m.config.Network.CIDR.Allow {
-		allowAddresses, err := parseCIDR(s)
+	for _, addr := range m.config.Network.CIDR.Allow {
+		allowedAddress, err := cidrToBPFMapKey(addr)
 		if err != nil {
 			return err
 		}
-
-		isV6 := allowAddresses.IP.To4() == nil
-		if isV6 {
-			err = allowed_v6_cidr_list.Update(ipNetToKey(*allowAddresses), uint8(0))
+		if allowedAddress.isV6address() {
+			err = m.cidrListUpdate([]IPAddress{allowedAddress}, ALLOWED_V6_CIDR_LIST_MAP_NAME)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = allowed_v4_cidr_list.Update(ipNetToKey(*allowAddresses), uint8(0))
+			err = m.cidrListUpdate([]IPAddress{allowedAddress}, ALLOWED_V4_CIDR_LIST_MAP_NAME)
 			if err != nil {
 				return err
 			}
@@ -324,29 +329,18 @@ func (m *Manager) setAllowedCIDRList() error {
 }
 
 func (m *Manager) setDeniedCIDRList() error {
-	denied_v4_cidr_list, err := m.mod.GetMap(DENIED_V4_CIDR_LIST_MAP_NAME)
-	if err != nil {
-		return err
-	}
-
-	denied_v6_cidr_list, err := m.mod.GetMap(DENIED_V6_CIDR_LIST_MAP_NAME)
-	if err != nil {
-		return err
-	}
-
-	for _, s := range m.config.Network.CIDR.Deny {
-		denyAddresses, err := parseCIDR(s)
+	for _, addr := range m.config.Network.CIDR.Deny {
+		deniedAddress, err := cidrToBPFMapKey(addr)
 		if err != nil {
 			return err
 		}
-		isV6 := denyAddresses.IP.To4() == nil
-		if isV6 {
-			err = denied_v6_cidr_list.Update(ipNetToKey(*denyAddresses), uint8(0))
+		if deniedAddress.isV6address() {
+			err = m.cidrListUpdate([]IPAddress{deniedAddress}, DENIED_V6_CIDR_LIST_MAP_NAME)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = denied_v4_cidr_list.Update(ipNetToKey(*denyAddresses), uint8(0))
+			err = m.cidrListUpdate([]IPAddress{deniedAddress}, DENIED_V4_CIDR_LIST_MAP_NAME)
 			if err != nil {
 				return err
 			}
@@ -494,6 +488,18 @@ func findOldCache(caches []DomainCache, addresses []IPAddress) []DomainCache {
 	return oldCaches
 }
 
+func cidrToBPFMapKey(cidr string) (IPAddress, error) {
+	ipaddr := IPAddress{}
+	_, n, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return ipaddr, err
+	}
+	ipaddr.address = n.IP
+	ipaddr.cidrMask = n.Mask
+	ipaddr.ipAddressToBPFMapKey()
+	return ipaddr, nil
+}
+
 func domainNameToBPFMapKey(host string, resolver DNSResolver) ([]IPAddress, error) {
 	var addrs = []IPAddress{}
 	addresses, err := resolver.Resolve(host)
@@ -502,53 +508,16 @@ func domainNameToBPFMapKey(host string, resolver DNSResolver) ([]IPAddress, erro
 	}
 	for _, addr := range addresses {
 		ipaddr := IPAddress{address: addr}
+		if ipaddr.isV6address() {
+			ipaddr.cidrMask = net.CIDRMask(128, 128)
+		} else {
+			ipaddr.cidrMask = net.CIDRMask(32, 32)
+		}
 		ipaddr.ipAddressToBPFMapKey()
 		addrs = append(addrs, ipaddr)
 	}
 
 	return addrs, nil
-}
-
-func (i *IPAddress) isV6address() bool {
-	return i.address.To4() == nil
-}
-
-func (i *IPAddress) ipAddressToBPFMapKey() []byte {
-	if i.isV6address() {
-		mask := net.CIDRMask(128, 128)
-		ip := net.IPNet{IP: i.address.Mask(mask), Mask: mask}
-		i.key = ipNetToKey(ip)
-	} else {
-		mask := net.CIDRMask(32, 32)
-		ip := net.IPNet{IP: i.address.Mask(mask), Mask: mask}
-		i.key = ipNetToKey(ip)
-	}
-
-	return i.key
-}
-
-func ipToKey(n net.IP) []byte {
-	isV6 := n.To4() == nil
-	if isV6 {
-		mask := net.CIDRMask(128, 128)
-		n := n.Mask(mask)
-		ipnet := net.IPNet{n, mask}
-		return ipv6ToKey(ipnet)
-	} else {
-		mask := net.CIDRMask(32, 32)
-		n := n.Mask(mask)
-		ipnet := net.IPNet{n, mask}
-		return ipv4ToKey(ipnet)
-	}
-}
-
-func ipNetToKey(n net.IPNet) []byte {
-	isV6 := n.IP.To4() == nil
-	if isV6 {
-		return ipv6ToKey(n)
-	} else {
-		return ipv4ToKey(n)
-	}
 }
 
 func ipv4ToKey(n net.IPNet) []byte {
@@ -582,12 +551,4 @@ func uintToKey(i uint) []byte {
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key[0:4], uint32(i))
 	return key
-}
-
-func parseCIDR(cidr string) (*net.IPNet, error) {
-	_, n, err := net.ParseCIDR(cidr)
-	if err != nil {
-		return nil, err
-	}
-	return n, nil
 }
