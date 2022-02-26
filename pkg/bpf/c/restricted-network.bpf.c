@@ -208,6 +208,11 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address,
     }
   }
 
+  if ((is_ipv4 && bpf_map_lookup_elem(&allowed_v4_cidr_list, &key.v4)) ||
+      (is_ipv6 && bpf_map_lookup_elem(&allowed_v6_cidr_list, &key.v6))) {
+    allow_connect = 0;
+  }
+
   if (bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid) ||
       has_allow_uid == 0) {
     allow_uid = 0;
@@ -255,11 +260,6 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address,
   if (((is_ipv4 && bpf_map_lookup_elem(&denied_v4_cidr_list, &key.v4)) ||
        (is_ipv6 && bpf_map_lookup_elem(&denied_v6_cidr_list, &key.v6))) &&
       bpf_map_lookup_elem(&allowed_gid_list, &allowed_gid)) {
-    allow_connect = 0;
-  }
-
-  if ((is_ipv4 && bpf_map_lookup_elem(&allowed_v4_cidr_list, &key.v4)) ||
-      (is_ipv6 && bpf_map_lookup_elem(&allowed_v6_cidr_list, &key.v6))) {
     allow_connect = 0;
   }
 
