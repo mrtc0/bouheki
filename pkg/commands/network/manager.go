@@ -526,7 +526,6 @@ func ipv4ToKey(n net.IPNet) []byte {
 
 	binary.LittleEndian.PutUint32(key[0:4], uint32(prefixLen))
 	copy(key[4:], n.IP)
-	fmt.Printf("%s, %#v\n", n.IP, key)
 
 	return key
 }
