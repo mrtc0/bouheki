@@ -53,7 +53,7 @@ func defaultConfig() *Config {
 			Mode:    "monitor",
 			Target:  "host",
 			Command: CommandConfig{Allow: []string{}, Deny: []string{}},
-			CIDR:    CIDRConfig{Allow: []string{"0.0.0.0/0"}, Deny: []string{}},
+			CIDR:    CIDRConfig{Allow: []string{"0.0.0.0/0", "::/0"}, Deny: []string{}},
 			UID:     UIDConfig{Allow: []uint{}, Deny: []uint{}},
 			GID:     GIDConfig{Allow: []uint{}, Deny: []uint{}},
 		},
