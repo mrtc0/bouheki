@@ -291,9 +291,7 @@ func TestAuditDomainUpdateV4(t *testing.T) {
 	assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
 	assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
 	assert.Equal(t, bytes.Equal(net.ParseIP(be_allowed_ip), net.ParseIP(byte2IPv4(body.DstIP))), true)
-
 	auditManager.manager.mod.Close()
-
 	defer exec.Command("cp", "../../../testdata/hosts.bk", "../../../testdata/hosts").Run()
 }
 

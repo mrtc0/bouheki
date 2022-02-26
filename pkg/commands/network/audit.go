@@ -14,13 +14,14 @@ import (
 )
 
 const (
-	TASK_COMM_LEN = 16
-	NEW_UTS_LEN   = 64
-	PADDING_LEN   = 7
-	SRCIP_V4_LEN  = 4
-	DSTIP_V4_LEN  = 4
-	SRCIP_V6_LEN  = 16
-	DSTIP_V6_LEN  = 16
+	UPDATE_INTERVAL = 5
+	TASK_COMM_LEN   = 16
+	NEW_UTS_LEN     = 64
+	PADDING_LEN     = 7
+	SRCIP_V4_LEN    = 4
+	DSTIP_V4_LEN    = 4
+	SRCIP_V6_LEN    = 16
+	DSTIP_V6_LEN    = 16
 
 	ACTION_MONITOR        uint8 = 0
 	ACTION_BLOCKED        uint8 = 1

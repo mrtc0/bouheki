@@ -54,7 +54,7 @@ type Config struct {
 	Log     LogConfig
 }
 
-func defaultConfig() *Config {
+func DefaultConfig() *Config {
 	return &Config{
 		Network: NetworkConfig{
 			Mode:    "monitor",
@@ -81,7 +81,7 @@ func NewConfig(configPath string) (*Config, error) {
 
 	d := yaml.NewDecoder(file)
 
-	config := defaultConfig()
+	config := DefaultConfig()
 	if err := d.Decode(&config); err != nil {
 		return nil, err
 	}

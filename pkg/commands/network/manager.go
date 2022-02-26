@@ -57,8 +57,23 @@ type Manager struct {
 }
 
 type DomainCache struct {
-	key  []byte
-	isV6 bool
+	key     []byte
+	mapName string
+}
+
+type IPAddress struct {
+	address net.IP
+	key     []byte
+}
+
+type DNSResolver interface {
+	Resolve(host string) ([]net.IP, error)
+}
+
+type DefaultResolver struct{}
+
+func (r *DefaultResolver) Resolve(host string) ([]net.IP, error) {
+	return net.LookupIP(host)
 }
 
 func (m *Manager) SetConfigToMap() error {
@@ -342,139 +357,174 @@ func (m *Manager) setDeniedCIDRList() error {
 }
 
 func (m *Manager) setAllowedDomainList() error {
-	allowed_v4_cidr_list, err := m.mod.GetMap(ALLOWED_V4_CIDR_LIST_MAP_NAME)
-	if err != nil {
-		return err
-	}
-
-	allowed_v6_cidr_list, err := m.mod.GetMap(ALLOWED_V6_CIDR_LIST_MAP_NAME)
-	if err != nil {
-		return err
-	}
-
-	for _, s := range m.config.Network.Domain.Allow {
-		allowAddresses, err := net.LookupIP(s)
+	for _, domain := range m.config.Network.Domain.Allow {
+		allowedAddresses, err := domainNameToBPFMapKey(domain, &DefaultResolver{})
 		if err != nil {
 			return err
 		}
 
-		caches, has := m.cache[s]
+		caches, has := m.cache[domain]
 		if has {
-			log.Debug("hit cache")
-			newKeys := make([][]byte, 2)
-			for _, addr := range allowAddresses {
-				newKeys = append(newKeys, ipToKey(addr))
-			}
-			oldKeys := make([][]byte, 2)
-			for _, cache := range caches {
-				oldKeys = append(oldKeys, cache.key)
-			}
-			if !reflect.DeepEqual(oldKeys, newKeys) {
-				log.Debug("deleting old key")
-				for _, oldKey := range caches {
-					if oldKey.isV6 {
-						if err := allowed_v6_cidr_list.DeleteKey(oldKey.key); err != nil {
-							return err
-						}
-					} else {
-						if err := allowed_v4_cidr_list.DeleteKey(oldKey.key); err != nil {
-							return err
-						}
-					}
-				}
-			} else {
-				return nil
+			err = m.updateDNSCache(caches, allowedAddresses)
+			if err != nil {
+				return err
 			}
 		}
 
-		for _, addr := range allowAddresses {
-			isV6 := addr.To4() == nil
-			key := ipToKey(addr)
-			if isV6 {
-				err = allowed_v6_cidr_list.Update(key, uint8(0))
+		for _, addr := range allowedAddresses {
+			if addr.isV6address() {
+				err = m.cidrListUpdate(allowedAddresses, ALLOWED_V6_CIDR_LIST_MAP_NAME)
 				if err != nil {
 					return err
+				}
+				m.cache[domain] = []DomainCache{
+					{key: addr.key, mapName: ALLOWED_V6_CIDR_LIST_MAP_NAME},
 				}
 			} else {
-				err = allowed_v4_cidr_list.Update(key, uint8(0))
+				err = m.cidrListUpdate(allowedAddresses, ALLOWED_V4_CIDR_LIST_MAP_NAME)
 				if err != nil {
 					return err
 				}
+				m.cache[domain] = []DomainCache{
+					{key: addr.key, mapName: ALLOWED_V4_CIDR_LIST_MAP_NAME},
+				}
 			}
-			m.cache[s] = []DomainCache{DomainCache{key, isV6}}
 		}
 	}
-	log.Debug("update done")
 
 	return nil
 }
 
 func (m *Manager) setDeniedDomainList() error {
-	denied_v4_cidr_list, err := m.mod.GetMap(DENIED_V4_CIDR_LIST_MAP_NAME)
-	if err != nil {
-		return err
-	}
-
-	denied_v6_cidr_list, err := m.mod.GetMap(DENIED_V6_CIDR_LIST_MAP_NAME)
-	if err != nil {
-		return err
-	}
-
-	for _, s := range m.config.Network.Domain.Deny {
-		denyAddresses, err := net.LookupIP(s)
+	for _, domain := range m.config.Network.Domain.Deny {
+		deniedAddresses, err := domainNameToBPFMapKey(domain, &DefaultResolver{})
 		if err != nil {
 			return err
 		}
 
-		caches, has := m.cache[s]
+		caches, has := m.cache[domain]
 		if has {
-			log.Debug("hit cache")
-			newKeys := make([][]byte, 2)
-			for _, addr := range denyAddresses {
-				newKeys = append(newKeys, ipToKey(addr))
-			}
-			oldKeys := make([][]byte, 2)
-			for _, cache := range caches {
-				oldKeys = append(oldKeys, cache.key)
-			}
-			if !reflect.DeepEqual(oldKeys, newKeys) {
-				log.Debug("deleting old key")
-				for _, oldKey := range caches {
-					if oldKey.isV6 {
-						if err := denied_v6_cidr_list.DeleteKey(oldKey.key); err != nil {
-							return err
-						}
-					} else {
-						if err := denied_v4_cidr_list.DeleteKey(oldKey.key); err != nil {
-							return err
-						}
-					}
-				}
-			} else {
-				return nil
+			err = m.updateDNSCache(caches, deniedAddresses)
+			if err != nil {
+				return err
 			}
 		}
 
-		for _, addr := range denyAddresses {
-			isV6 := addr.To4() == nil
-			key := ipToKey(addr)
-			if isV6 {
-				err = denied_v6_cidr_list.Update(key, uint8(0))
+		for _, addr := range deniedAddresses {
+			if addr.isV6address() {
+				err = m.cidrListUpdate(deniedAddresses, DENIED_V6_CIDR_LIST_MAP_NAME)
 				if err != nil {
 					return err
+				}
+				m.cache[domain] = []DomainCache{
+					{key: addr.key, mapName: DENIED_V6_CIDR_LIST_MAP_NAME},
 				}
 			} else {
-				err = denied_v4_cidr_list.Update(key, uint8(0))
+				err = m.cidrListUpdate(deniedAddresses, DENIED_V4_CIDR_LIST_MAP_NAME)
 				if err != nil {
 					return err
 				}
+				m.cache[domain] = []DomainCache{
+					{key: addr.key, mapName: DENIED_V4_CIDR_LIST_MAP_NAME},
+				}
 			}
-			m.cache[s] = []DomainCache{DomainCache{key, isV6}}
 		}
 	}
-	log.Debug("update done")
 
 	return nil
+}
+
+func (m *Manager) cidrListDeleteKey(mapName string, key []byte) error {
+	cidr_list, err := m.mod.GetMap(mapName)
+	if err != nil {
+		return err
+	}
+
+	if err := cidr_list.DeleteKey(key); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Manager) cidrListUpdate(addresses []IPAddress, mapName string) error {
+	for _, addr := range addresses {
+		cidr_list, err := m.mod.GetMap(mapName)
+		if err != nil {
+			return err
+		}
+		err = cidr_list.Update(addr.key, uint8(0))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *Manager) updateDNSCache(caches []DomainCache, addresses []IPAddress) error {
+	oldCaches := findOldCache(caches, addresses)
+	if len(oldCaches) == 0 {
+		return nil
+	}
+
+	for _, cache := range oldCaches {
+		if err := m.cidrListDeleteKey(cache.mapName, cache.key); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func findOldCache(caches []DomainCache, addresses []IPAddress) []DomainCache {
+	oldCaches := []DomainCache{}
+
+	for i, cache := range caches {
+		dup := false
+		for _, addr := range addresses {
+			if reflect.DeepEqual(addr.key, cache.key) {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			oldCaches = append(oldCaches, caches[i])
+		}
+	}
+
+	return oldCaches
+}
+
+func domainNameToBPFMapKey(host string, resolver DNSResolver) ([]IPAddress, error) {
+	var addrs = []IPAddress{}
+	addresses, err := resolver.Resolve(host)
+	if err != nil {
+		return addrs, err
+	}
+	for _, addr := range addresses {
+		ipaddr := IPAddress{address: addr}
+		ipaddr.ipAddressToBPFMapKey()
+		addrs = append(addrs, ipaddr)
+	}
+
+	return addrs, nil
+}
+
+func (i *IPAddress) isV6address() bool {
+	return i.address.To4() == nil
+}
+
+func (i *IPAddress) ipAddressToBPFMapKey() []byte {
+	if i.isV6address() {
+		mask := net.CIDRMask(128, 128)
+		ip := net.IPNet{IP: i.address.Mask(mask), Mask: mask}
+		i.key = ipNetToKey(ip)
+	} else {
+		mask := net.CIDRMask(32, 32)
+		ip := net.IPNet{IP: i.address.Mask(mask), Mask: mask}
+		i.key = ipNetToKey(ip)
+	}
+
+	return i.key
 }
 
 func ipToKey(n net.IP) []byte {
@@ -507,6 +557,7 @@ func ipv4ToKey(n net.IPNet) []byte {
 
 	binary.LittleEndian.PutUint32(key[0:4], uint32(prefixLen))
 	copy(key[4:], n.IP)
+	fmt.Printf("%s, %#v\n", n.IP, key)
 
 	return key
 }
