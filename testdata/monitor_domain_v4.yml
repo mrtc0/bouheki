@@ -1,5 +1,5 @@
 network:
-  mode: monitor 
+  mode: monitor
   target: host
   cidr:
     allow:

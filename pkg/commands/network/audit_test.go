@@ -234,7 +234,7 @@ func TestAuditBlockModeDomainV6(t *testing.T) {
 	be_allowed_url := fmt.Sprintf("http://%s/", be_allowed_domain)
 	curl_resolve_option := fmt.Sprintf("%s:80:%s", be_blocked_domain, be_blocked_ip)
 
-	auditManager := runAuditWithOnce(fixture, []string{"curl", "--resolve", curl_resolve_option, be_blocked_url}, eventsChannel)
+	auditManager := runAuditWithOnce(fixture, []string{"curl", "-6", "--resolve", curl_resolve_option, be_blocked_url}, eventsChannel)
 	eventBytes := <-eventsChannel
 
 	header, rawBody, err := parseEvent(eventBytes)
@@ -253,6 +253,56 @@ func TestAuditBlockModeDomainV6(t *testing.T) {
 	curl_resolve_option = fmt.Sprintf("%s:80:%s", be_allowed_domain, be_allowed_ip)
 	err = exec.Command("curl", "--resolve", curl_resolve_option, be_allowed_url).Run()
 	assert.Nil(t, err)
+
+	auditManager.manager.mod.Close()
+}
+
+func TestAuditMonitorModeDomainV4(t *testing.T) {
+	fixture := "../../../testdata/monitor_domain_v4.yml"
+	eventsChannel := make(chan []byte)
+
+	be_monitord_domain := "nginx-1"
+	be_monitord_ip := "10.254.249.3"
+	be_monitord_url := fmt.Sprintf("http://%s/", be_monitord_domain)
+	curl_resolve_option := fmt.Sprintf("%s:80:%s", be_monitord_domain, be_monitord_ip)
+
+	auditManager := runAuditWithOnce(fixture, []string{"curl", "--resolve", curl_resolve_option, be_monitord_url}, eventsChannel)
+	eventBytes := <-eventsChannel
+	header, rawBody, err := parseEvent(eventBytes)
+	assert.Nil(t, err)
+
+	assert.Equal(t, BLOCKED_IPV4, header.EventType)
+
+	body := rawBody.(detectEventIPv4)
+
+	assert.Equal(t, ACTION_MONITOR_STRING, body.ActionResult())
+	assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+	assert.Equal(t, be_monitord_ip, byte2IPv4(body.DstIP))
+
+	auditManager.manager.mod.Close()
+}
+
+func TestAuditMonitorModeDomainV6(t *testing.T) {
+	fixture := "../../../testdata/monitor_domain_v6.yml"
+	eventsChannel := make(chan []byte)
+
+	be_monitord_domain := "nginx-1"
+	be_monitord_ip := "2001:3984:3989:0000:0000:0000:0000:0003"
+	be_monitord_url := fmt.Sprintf("http://%s/", be_monitord_domain)
+	curl_resolve_option := fmt.Sprintf("%s:80:%s", be_monitord_domain, be_monitord_ip)
+
+	auditManager := runAuditWithOnce(fixture, []string{"curl", "-6", "--resolve", curl_resolve_option, be_monitord_url}, eventsChannel)
+	eventBytes := <-eventsChannel
+	header, rawBody, err := parseEvent(eventBytes)
+	assert.Nil(t, err)
+
+	assert.Equal(t, BLOCKED_IPV6, header.EventType)
+
+	body := rawBody.(detectEventIPv6)
+
+	assert.Equal(t, ACTION_MONITOR_STRING, body.ActionResult())
+	assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
+	assert.Equal(t, be_monitord_ip, byte2IPv6(body.DstIP))
 
 	auditManager.manager.mod.Close()
 }
