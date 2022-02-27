@@ -60,8 +60,8 @@ func DefaultConfig() *Config {
 			Mode:    "monitor",
 			Target:  "host",
 			Command: CommandConfig{Allow: []string{}, Deny: []string{}},
-			CIDR:    CIDRConfig{Allow: []string{"0.0.0.0/0"}, Deny: []string{}},
-			Domain:  DomainConfig{Allow: []string{}, Deny: []string{}, Interval: 4}, // source: https://xkcd.com/221/
+      CIDR:    CIDRConfig{Allow: []string{"0.0.0.0/0", "::/0"}, Deny: []string{}},
+			Domain:  DomainConfig{Allow: []string{}, Deny: []string{}, Interval: 5},
 			UID:     UIDConfig{Allow: []uint{}, Deny: []uint{}},
 			GID:     GIDConfig{Allow: []uint{}, Deny: []uint{}},
 		},
