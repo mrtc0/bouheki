@@ -52,6 +52,11 @@ network:
     # Override "allow" list with exceptions. Default: []
     deny: # []
       - 10.0.1.10/32
+  # Restrictions by domain.
+  domain:
+    allow: []
+    deny: # []
+      - example.com
   # Restrictions by command name (optional).
   command:
     # Default: empty. All command will be allowed.
@@ -147,5 +152,5 @@ $ make build
 # Test
 
 ```shell
-$ make test
+$ make test && make test/integration
 ```
