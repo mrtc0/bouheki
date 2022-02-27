@@ -6,6 +6,6 @@ network:
       - 0.0.0.0/0
   domain:
     deny:
-      - nginx-1.v4
+      - nginx-1
 log:
   format: json

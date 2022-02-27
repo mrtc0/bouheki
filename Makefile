@@ -32,9 +32,7 @@ test: bpf-restricted-network
 .PHONY: test/integration
 test/integration: bpf-restricted-network
 	which gotestsum || go install gotest.tools/gotestsum@latest
-	sudo mount --bind testdata/hosts /etc/hosts
 	CGO_LDFLAGS="-lbpf" sudo -E gotestsum -- --tags=integration --mod=vendor -bench=^$$ -race ./...
-	sudo umount /etc/hosts
 
 .PHONY: release
 release:
