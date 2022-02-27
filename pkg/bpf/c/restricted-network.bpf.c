@@ -1,9 +1,9 @@
-#include <linux/errno.h>
-#include "vmlinux.h"
-#include <bpf/bpf_helpers.h>
-#include <bpf/bpf_core_read.h>
-#include <bpf/bpf_tracing.h>
 #include "common.h"
+#include "vmlinux.h"
+#include <bpf/bpf_core_read.h>
+#include <bpf/bpf_helpers.h>
+#include <bpf/bpf_tracing.h>
+#include <linux/errno.h>
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
@@ -19,8 +19,7 @@ BPF_HASH(denied_uid_list, struct denied_uid_key, u32, 256);
 BPF_HASH(allowed_gid_list, struct allowed_gid_key, u32, 256);
 BPF_HASH(denied_gid_list, struct denied_gid_key, u32, 256);
 
-struct
-{
+struct {
   __uint(type, BPF_MAP_TYPE_LPM_TRIE);
   __uint(max_entries, 256);
   __type(key, struct ipv4_trie_key);
@@ -28,8 +27,7 @@ struct
   __uint(map_flags, BPF_F_NO_PREALLOC);
 } denied_v4_cidr_list SEC(".maps");
 
-struct
-{
+struct {
   __uint(type, BPF_MAP_TYPE_LPM_TRIE);
   __uint(max_entries, 256);
   __type(key, struct ipv6_trie_key);
@@ -37,8 +35,7 @@ struct
   __uint(map_flags, BPF_F_NO_PREALLOC);
 } denied_v6_cidr_list SEC(".maps");
 
-struct
-{
+struct {
   __uint(type, BPF_MAP_TYPE_LPM_TRIE);
   __uint(max_entries, 256);
   __type(key, struct ipv4_trie_key);
@@ -46,8 +43,7 @@ struct
   __uint(map_flags, BPF_F_NO_PREALLOC);
 } allowed_v4_cidr_list SEC(".maps");
 
-struct
-{
+struct {
   __uint(type, BPF_MAP_TYPE_LPM_TRIE);
   __uint(max_entries, 256);
   __type(key, struct ipv6_trie_key);
@@ -55,8 +51,10 @@ struct
   __uint(map_flags, BPF_F_NO_PREALLOC);
 } allowed_v6_cidr_list SEC(".maps");
 
-static inline void report_ipv4_event(void *ctx, u64 cg, enum action action, enum lsm_hook_point point, struct socket *sock, const struct sockaddr_in *daddr)
-{
+static inline void report_ipv4_event(void *ctx, u64 cg, enum action action,
+                                     enum lsm_hook_point point,
+                                     struct socket *sock,
+                                     const struct sockaddr_in *daddr) {
   struct audit_event_ipv4 ev;
 
   struct task_struct *current_task;
@@ -76,7 +74,8 @@ static inline void report_ipv4_event(void *ctx, u64 cg, enum action action, enum
   bpf_get_current_comm(&ev.hdr.task, sizeof(ev.hdr.task));
 
   struct task_struct *parent_task = BPF_CORE_READ(current_task, real_parent);
-  bpf_probe_read_kernel_str(&ev.hdr.parent_task, sizeof(ev.hdr.parent_task), &parent_task->comm);
+  bpf_probe_read_kernel_str(&ev.hdr.parent_task, sizeof(ev.hdr.parent_task),
+                            &parent_task->comm);
 
   ev.dport = __builtin_bswap16(daddr->sin_port);
   ev.src = src_addr4(sock);
@@ -88,10 +87,12 @@ static inline void report_ipv4_event(void *ctx, u64 cg, enum action action, enum
   bpf_ringbuf_output(&audit_events, &ev, sizeof(ev), 0);
 }
 
-static inline void report_ipv6_event(void *ctx, u64 cg, enum action action, enum lsm_hook_point point, struct socket *sock, const struct sockaddr_in6 *daddr)
-{
+static inline void report_ipv6_event(void *ctx, u64 cg, enum action action,
+                                     enum lsm_hook_point point,
+                                     struct socket *sock,
+                                     const struct sockaddr_in6 *daddr) {
   struct audit_event_ipv6 ev;
-  
+
   struct task_struct *current_task;
   struct uts_namespace *uts_ns;
   struct nsproxy *nsproxy;
@@ -107,25 +108,24 @@ static inline void report_ipv6_event(void *ctx, u64 cg, enum action action, enum
   ev.hdr.pid = (u32)(bpf_get_current_pid_tgid() >> 32);
   ev.hdr.type = BLOCKED_IPV6;
   bpf_get_current_comm(&ev.hdr.task, sizeof(ev.hdr.task));
-  
+
   struct task_struct *parent_task = BPF_CORE_READ(current_task, real_parent);
-  bpf_probe_read_kernel_str(&ev.hdr.parent_task, sizeof(ev.hdr.parent_task), &parent_task->comm);
-  
+  bpf_probe_read_kernel_str(&ev.hdr.parent_task, sizeof(ev.hdr.parent_task),
+                            &parent_task->comm);
+
   ev.dport = __builtin_bswap16(daddr->sin6_port);
   ev.src = src_addr6(sock);
   ev.dst = BPF_CORE_READ(daddr, sin6_addr);
   ev.operation = (u8)point;
   ev.action = (u8)action;
   ev.sock_type = (u8)sock->type;
-  
+
   bpf_ringbuf_output(&audit_events, &ev, sizeof(ev), 0);
 }
 
-
 // In some cases, such as getaddrinfo(), sin_port is set to 0.
 // Not audited because no communication actually occurs.
-static inline bool is_destination_port_zero_v4(struct sockaddr_in *inet_addr)
-{
+static inline bool is_destination_port_zero_v4(struct sockaddr_in *inet_addr) {
   return __builtin_bswap16(inet_addr->sin_port) == 0;
 }
 
@@ -135,8 +135,8 @@ static inline bool is_destination_port_zero_v6(struct sockaddr_in6 *inet_addr) {
 
 // TODO: lsm/send_msg
 SEC("lsm/socket_connect")
-int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int addrlen)
-{
+int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address,
+             int addrlen) {
   int allow_connect = -EPERM;
   int allow_command = -EPERM;
   int allow_uid = -EPERM;
@@ -151,7 +151,7 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 
   struct sockaddr_in *inet_addr4;
   struct sockaddr_in6 *inet_addr6;
-      
+
   if (is_ipv6) {
     inet_addr6 = (struct sockaddr_in6 *)address;
   } else {
@@ -159,8 +159,7 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
   }
 
   if ((is_ipv6 && is_destination_port_zero_v6(inet_addr6)) ||
-      (is_ipv4 && is_destination_port_zero_v4(inet_addr4)))
-  {
+      (is_ipv4 && is_destination_port_zero_v4(inet_addr4))) {
     return 0;
   }
 
@@ -188,27 +187,23 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
 
   u32 index = 0;
 
-  struct bouheki_config *c = (struct bouheki_config *)bpf_map_lookup_elem(&bouheki_config, &index);
+  struct bouheki_config *c =
+      (struct bouheki_config *)bpf_map_lookup_elem(&bouheki_config, &index);
 
   // Redundant by BPF constraints...
   int has_allow_command = 0;
   int has_allow_uid = 0;
   int has_allow_gid = 0;
 
-
-  if (c && c->has_allow_command)
-  {
+  if (c && c->has_allow_command) {
     has_allow_command = c->has_allow_command;
   }
-  if (c && c->has_allow_uid)
-  {
+  if (c && c->has_allow_uid) {
     has_allow_uid = c->has_allow_uid;
   }
 
-  if (c && c->target == TARGET_CONTAINER)
-  {
-    if (!is_container())
-    {
+  if (c && c->target == TARGET_CONTAINER) {
+    if (!is_container()) {
       return 0;
     }
   }
@@ -218,33 +213,30 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
     allow_connect = 0;
   }
 
-  if (bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid) || has_allow_uid == 0)
-  {
+  if (bpf_map_lookup_elem(&allowed_uid_list, &allowed_uid) ||
+      has_allow_uid == 0) {
     allow_uid = 0;
   }
 
-  if (bpf_map_lookup_elem(&allowed_gid_list, &allowed_gid) || has_allow_gid == 0)
-  {
+  if (bpf_map_lookup_elem(&allowed_gid_list, &allowed_gid) ||
+      has_allow_gid == 0) {
     allow_gid = 0;
   }
 
-  if (bpf_map_lookup_elem(&allowed_command_list, &allowed_command) || has_allow_command == 0)
-  {
+  if (bpf_map_lookup_elem(&allowed_command_list, &allowed_command) ||
+      has_allow_command == 0) {
     allow_command = 0;
   }
 
-  if (bpf_map_lookup_elem(&denied_command_list, &denied_command))
-  {
+  if (bpf_map_lookup_elem(&denied_command_list, &denied_command)) {
     allow_command = -EPERM;
   }
 
-  if (bpf_map_lookup_elem(&denied_uid_list, &denied_uid))
-  {
+  if (bpf_map_lookup_elem(&denied_uid_list, &denied_uid)) {
     allow_uid = -EPERM;
   }
 
-  if (bpf_map_lookup_elem(&denied_gid_list, &denied_gid))
-  {
+  if (bpf_map_lookup_elem(&denied_gid_list, &denied_gid)) {
     allow_gid = -EPERM;
   }
 
@@ -272,26 +264,28 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address, int 
   }
 
   int can_access = -EPERM;
-  if (allow_connect == 0 && allow_uid == 0 && allow_gid == 0 && allow_command == 0)
-  {
+  if (allow_connect == 0 && allow_uid == 0 && allow_gid == 0 &&
+      allow_command == 0) {
     can_access = 0;
   }
 
-  if (can_access != 0 && c && c->mode == MODE_BLOCK)
-  {
+  if (can_access != 0 && c && c->mode == MODE_BLOCK) {
     if (is_ipv4) {
-      report_ipv4_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock, inet_addr4);
+      report_ipv4_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock,
+                        inet_addr4);
     } else {
-      report_ipv6_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock, inet_addr6);
+      report_ipv6_event((void *)ctx, cg, ACTION_BLOCK, CONNECT, sock,
+                        inet_addr6);
     }
   }
 
-  if (c && c->mode == MODE_MONITOR)
-  {
+  if (c && c->mode == MODE_MONITOR) {
     if (is_ipv4) {
-      report_ipv4_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock, inet_addr4);
+      report_ipv4_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock,
+                        inet_addr4);
     } else {
-      report_ipv6_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock, inet_addr6);
+      report_ipv6_event((void *)ctx, cg, ACTION_MONITOR, CONNECT, sock,
+                        inet_addr6);
     }
     return 0;
   }

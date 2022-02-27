@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"time"
 
 	"github.com/mrtc0/bouheki/pkg/bpf"
 	"github.com/mrtc0/bouheki/pkg/config"
@@ -13,13 +14,14 @@ import (
 )
 
 const (
-	TASK_COMM_LEN = 16
-	NEW_UTS_LEN   = 64
-	PADDING_LEN   = 7
-	SRCIP_V4_LEN  = 4
-	DSTIP_V4_LEN  = 4
-	SRCIP_V6_LEN  = 16
-	DSTIP_V6_LEN  = 16
+	UPDATE_INTERVAL = 5
+	TASK_COMM_LEN   = 16
+	NEW_UTS_LEN     = 64
+	PADDING_LEN     = 7
+	SRCIP_V4_LEN    = 4
+	DSTIP_V4_LEN    = 4
+	SRCIP_V6_LEN    = 16
+	DSTIP_V6_LEN    = 16
 
 	ACTION_MONITOR        uint8 = 0
 	ACTION_BLOCKED        uint8 = 1
@@ -109,15 +111,31 @@ func setupBPFProgram() (*libbpfgo.Module, error) {
 	return mod, nil
 }
 
+func UpdateDomainList(mgr Manager) {
+	for {
+		time.Sleep(time.Second * time.Duration(mgr.config.Network.Domain.Interval))
+		if err := mgr.setAllowedDomainList(); err != nil {
+			log.Fatal(err)
+		}
+		if err := mgr.setDeniedDomainList(); err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
 func RunAudit(conf *config.Config) {
 	mod, err := setupBPFProgram()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	cache := make(map[string][]DomainCache)
+
 	mgr := Manager{
-		mod:    mod,
-		config: conf,
+		mod:         mod,
+		config:      conf,
+		cache:       cache,
+		dnsResolver: &DefaultResolver{},
 	}
 
 	err = mgr.SetConfigToMap()
@@ -127,6 +145,8 @@ func RunAudit(conf *config.Config) {
 
 	eventsChannel := make(chan []byte)
 	mgr.Start(eventsChannel)
+
+	go UpdateDomainList(mgr)
 
 	for {
 		eventBytes := <-eventsChannel

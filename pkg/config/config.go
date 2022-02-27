@@ -11,8 +11,15 @@ type NetworkConfig struct {
 	Target  string        `yaml:"target"`
 	Command CommandConfig `yaml:"command"`
 	CIDR    CIDRConfig    `yaml:"cidr"`
+	Domain  DomainConfig  `yaml:"domain"`
 	UID     UIDConfig     `yaml:"uid"`
 	GID     GIDConfig     `yaml:"gid"`
+}
+
+type DomainConfig struct {
+	Allow    []string `yaml:"allow"`
+	Deny     []string `yaml:"deny"`
+	Interval uint     `yaml:"interval"`
 }
 
 type CIDRConfig struct {
@@ -47,13 +54,14 @@ type Config struct {
 	Log     LogConfig
 }
 
-func defaultConfig() *Config {
+func DefaultConfig() *Config {
 	return &Config{
 		Network: NetworkConfig{
 			Mode:    "monitor",
 			Target:  "host",
 			Command: CommandConfig{Allow: []string{}, Deny: []string{}},
-			CIDR:    CIDRConfig{Allow: []string{"0.0.0.0/0", "::/0"}, Deny: []string{}},
+      CIDR:    CIDRConfig{Allow: []string{"0.0.0.0/0", "::/0"}, Deny: []string{}},
+			Domain:  DomainConfig{Allow: []string{}, Deny: []string{}, Interval: 5},
 			UID:     UIDConfig{Allow: []uint{}, Deny: []uint{}},
 			GID:     GIDConfig{Allow: []uint{}, Deny: []uint{}},
 		},
@@ -73,7 +81,7 @@ func NewConfig(configPath string) (*Config, error) {
 
 	d := yaml.NewDecoder(file)
 
-	config := defaultConfig()
+	config := DefaultConfig()
 	if err := d.Decode(&config); err != nil {
 		return nil, err
 	}

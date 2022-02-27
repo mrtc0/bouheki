@@ -29,6 +29,11 @@ test: bpf-restricted-network
 	which gotestsum || go install gotest.tools/gotestsum@latest
 	CGO_LDFLAGS="-lbpf" sudo -E gotestsum -- --mod=vendor -bench=^$$ -race ./...
 
+.PHONY: test/integration
+test/integration: bpf-restricted-network
+	which gotestsum || go install gotest.tools/gotestsum@latest
+	CGO_LDFLAGS="-lbpf" sudo -E gotestsum -- --tags=integration --mod=vendor -bench=^$$ -race ./...
+
 .PHONY: release
 release:
 	goreleaser release --rm-dist
