@@ -454,7 +454,9 @@ func (m *Manager) cidrListUpdate(addresses []IPAddress, mapName string) error {
 	return nil
 }
 
-// updateDNSCache is update DNS Cache. If the IP address has been changed as a result of name resolution, remove the old IP address from the eBPF Map. If there are no changes, do nothing.
+// updateDNSCache is update DNS Cache.
+//
+// If the IP address has been changed as a result of name resolution, remove the old IP address from the eBPF Map. If there are no changes, do nothing.
 func (m *Manager) updateDNSCache(caches []DomainCache, addresses []IPAddress) error {
 	oldCaches := findOldCache(caches, addresses)
 	if len(oldCaches) == 0 {
@@ -470,6 +472,9 @@ func (m *Manager) updateDNSCache(caches []DomainCache, addresses []IPAddress) er
 	return nil
 }
 
+// findOldCache is check the cache against the result of the new name resolution and return the (old) cache to be removed.
+//
+// If the IP in the cache is not included in the name resolution result, it will be assumed to be an old IP.
 func findOldCache(caches []DomainCache, addresses []IPAddress) []DomainCache {
 	oldCaches := []DomainCache{}
 
