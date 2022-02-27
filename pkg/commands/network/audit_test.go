@@ -190,9 +190,15 @@ func TestAuditBlockModeDomainV4(t *testing.T) {
 
 	be_blocked_domain := "nginx-1"
 	be_blocked_ip := "10.254.249.3"
-	be_blocked_url := fmt.Sprintf("http://%s/", be_blocked_domain)
+	be_allowed_domain := "nginx-2"
+	be_allowed_ip := "10.254.249.4"
 
-	auditManager := runAuditWithOnce(fixture, []string{"curl", "--resolve", "nginx-1:80:10.254.249.3", be_blocked_url}, eventsChannel)
+	be_blocked_url := fmt.Sprintf("http://%s/", be_blocked_domain)
+	be_allowed_url := fmt.Sprintf("http://%s/", be_allowed_domain)
+
+	curl_resolve_option := fmt.Sprintf("%s:80:%s", be_blocked_domain, be_blocked_ip)
+
+	auditManager := runAuditWithOnce(fixture, []string{"curl", "--resolve", curl_resolve_option, be_blocked_url}, eventsChannel)
 	eventBytes := <-eventsChannel
 
 	header, rawBody, err := parseEvent(eventBytes)
@@ -205,10 +211,11 @@ func TestAuditBlockModeDomainV4(t *testing.T) {
 	assert.Equal(t, auditManager.cmd.Process.Pid, int(header.PID))
 	assert.Equal(t, bytes.Equal(net.ParseIP(be_blocked_ip), net.ParseIP(byte2IPv4(body.DstIP))), true)
 
-	err = exec.Command("curl", "--resolve", "nginx-1:80:10.254.249.3", be_blocked_url).Run()
+	err = exec.Command("curl", "--resolve", curl_resolve_option, be_blocked_url).Run()
 	assert.NotNil(t, err)
 
-	err = exec.Command("curl", "--resolve", "nginx-2:80:10.254.249.4", "http://nginx-2/").Run()
+	curl_resolve_option = fmt.Sprintf("%s:80:%s", be_allowed_domain, be_allowed_ip)
+	err = exec.Command("curl", "--resolve", "nginx-2:80:10.254.249.4", be_allowed_url).Run()
 	assert.Nil(t, err)
 
 	auditManager.manager.mod.Close()
@@ -224,9 +231,10 @@ func TestAuditBlockModeDomainV6(t *testing.T) {
 	be_allowed_ip := "2001:3984:3989::4"
 
 	be_blocked_url := fmt.Sprintf("http://%s/", be_blocked_domain)
+	be_allowed_url := fmt.Sprintf("http://%s/", be_allowed_domain)
 	curl_resolve_option := fmt.Sprintf("%s:80:%s", be_blocked_domain, be_blocked_ip)
 
-	auditManager := runAuditWithOnce(fixture, []string{"curl", "--resolve", "nginx-1:80:2001:3984:3989::3", be_blocked_url}, eventsChannel)
+	auditManager := runAuditWithOnce(fixture, []string{"curl", "--resolve", curl_resolve_option, be_blocked_url}, eventsChannel)
 	eventBytes := <-eventsChannel
 
 	header, rawBody, err := parseEvent(eventBytes)
@@ -243,7 +251,7 @@ func TestAuditBlockModeDomainV6(t *testing.T) {
 	assert.NotNil(t, err)
 
 	curl_resolve_option = fmt.Sprintf("%s:80:%s", be_allowed_domain, be_allowed_ip)
-	err = exec.Command("curl", "--resolve", curl_resolve_option, "http://nginx-2/").Run()
+	err = exec.Command("curl", "--resolve", curl_resolve_option, be_allowed_url).Run()
 	assert.Nil(t, err)
 
 	auditManager.manager.mod.Close()
