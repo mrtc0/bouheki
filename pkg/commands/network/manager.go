@@ -50,10 +50,11 @@ const (
 )
 
 type Manager struct {
-	mod    *libbpfgo.Module
-	config *config.Config
-	rb     *libbpfgo.RingBuffer
-	cache  map[string][]DomainCache
+	mod         *libbpfgo.Module
+	config      *config.Config
+	rb          *libbpfgo.RingBuffer
+	cache       map[string][]DomainCache
+	dnsResolver DNSResolver
 }
 
 type DomainCache struct {
@@ -352,7 +353,7 @@ func (m *Manager) setDeniedCIDRList() error {
 
 func (m *Manager) setAllowedDomainList() error {
 	for _, domain := range m.config.Network.Domain.Allow {
-		allowedAddresses, err := domainNameToBPFMapKey(domain, &DefaultResolver{})
+		allowedAddresses, err := domainNameToBPFMapKey(domain, m.dnsResolver)
 		if err != nil {
 			return err
 		}
@@ -391,7 +392,7 @@ func (m *Manager) setAllowedDomainList() error {
 
 func (m *Manager) setDeniedDomainList() error {
 	for _, domain := range m.config.Network.Domain.Deny {
-		deniedAddresses, err := domainNameToBPFMapKey(domain, &DefaultResolver{})
+		deniedAddresses, err := domainNameToBPFMapKey(domain, m.dnsResolver)
 		if err != nil {
 			return err
 		}

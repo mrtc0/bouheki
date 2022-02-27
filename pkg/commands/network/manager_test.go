@@ -74,7 +74,7 @@ func Test_updateDNSCache_noNeedUpdate(t *testing.T) {
 				test.deniedAddressed[i].key = ipaddr.ipAddressToBPFMapKey()
 			}
 
-			mgr := createManager(config)
+			mgr := createManager(config, &DefaultResolver{})
 
 			assert.Equal(t, nil, mgr.updateDNSCache(test.caches, test.deniedAddressed))
 		})
@@ -110,7 +110,7 @@ func Test_updateDNSCache_needUpdate(t *testing.T) {
 
 	testConfig := config.DefaultConfig()
 	testConfig.Network.CIDR = config.CIDRConfig{Deny: []string{cidr1, cidr2}}
-	mgr := createManager(testConfig)
+	mgr := createManager(testConfig, &DefaultResolver{})
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -253,16 +253,17 @@ func loadFixtureConfig(path string) *config.Config {
 	return conf
 }
 
-func createManager(conf *config.Config) Manager {
+func createManager(conf *config.Config, dnsResolver DNSResolver) Manager {
 	mod, err := setupBPFProgram()
 	if err != nil {
 		panic(err)
 	}
 
 	mgr := Manager{
-		mod:    mod,
-		config: conf,
-		cache:  make(map[string][]DomainCache),
+		mod:         mod,
+		config:      conf,
+		cache:       make(map[string][]DomainCache),
+		dnsResolver: dnsResolver,
 	}
 
 	err = mgr.SetConfigToMap()

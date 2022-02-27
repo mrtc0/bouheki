@@ -132,9 +132,10 @@ func RunAudit(conf *config.Config) {
 	cache := make(map[string][]DomainCache)
 
 	mgr := Manager{
-		mod:    mod,
-		config: conf,
-		cache:  cache,
+		mod:         mod,
+		config:      conf,
+		cache:       cache,
+		dnsResolver: &DefaultResolver{},
 	}
 
 	err = mgr.SetConfigToMap()
