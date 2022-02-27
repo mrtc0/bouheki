@@ -314,12 +314,12 @@ func (m *Manager) setAllowedCIDRList() error {
 			return err
 		}
 		if allowedAddress.isV6address() {
-			err = m.cidrListUpdate([]IPAddress{allowedAddress}, ALLOWED_V6_CIDR_LIST_MAP_NAME)
+			err = m.cidrListUpdate(allowedAddress, ALLOWED_V6_CIDR_LIST_MAP_NAME)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = m.cidrListUpdate([]IPAddress{allowedAddress}, ALLOWED_V4_CIDR_LIST_MAP_NAME)
+			err = m.cidrListUpdate(allowedAddress, ALLOWED_V4_CIDR_LIST_MAP_NAME)
 			if err != nil {
 				return err
 			}
@@ -336,12 +336,12 @@ func (m *Manager) setDeniedCIDRList() error {
 			return err
 		}
 		if deniedAddress.isV6address() {
-			err = m.cidrListUpdate([]IPAddress{deniedAddress}, DENIED_V6_CIDR_LIST_MAP_NAME)
+			err = m.cidrListUpdate(deniedAddress, DENIED_V6_CIDR_LIST_MAP_NAME)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = m.cidrListUpdate([]IPAddress{deniedAddress}, DENIED_V4_CIDR_LIST_MAP_NAME)
+			err = m.cidrListUpdate(deniedAddress, DENIED_V4_CIDR_LIST_MAP_NAME)
 			if err != nil {
 				return err
 			}
@@ -368,7 +368,7 @@ func (m *Manager) setAllowedDomainList() error {
 
 		for _, addr := range allowedAddresses {
 			if addr.isV6address() {
-				err = m.cidrListUpdate(allowedAddresses, ALLOWED_V6_CIDR_LIST_MAP_NAME)
+				err = m.cidrListUpdate(addr, ALLOWED_V6_CIDR_LIST_MAP_NAME)
 				if err != nil {
 					return err
 				}
@@ -376,7 +376,7 @@ func (m *Manager) setAllowedDomainList() error {
 					{key: addr.key, mapName: ALLOWED_V6_CIDR_LIST_MAP_NAME},
 				}
 			} else {
-				err = m.cidrListUpdate(allowedAddresses, ALLOWED_V4_CIDR_LIST_MAP_NAME)
+				err = m.cidrListUpdate(addr, ALLOWED_V4_CIDR_LIST_MAP_NAME)
 				if err != nil {
 					return err
 				}
@@ -407,7 +407,7 @@ func (m *Manager) setDeniedDomainList() error {
 
 		for _, addr := range deniedAddresses {
 			if addr.isV6address() {
-				err = m.cidrListUpdate(deniedAddresses, DENIED_V6_CIDR_LIST_MAP_NAME)
+				err = m.cidrListUpdate(addr, DENIED_V6_CIDR_LIST_MAP_NAME)
 				if err != nil {
 					return err
 				}
@@ -415,7 +415,7 @@ func (m *Manager) setDeniedDomainList() error {
 					{key: addr.key, mapName: DENIED_V6_CIDR_LIST_MAP_NAME},
 				}
 			} else {
-				err = m.cidrListUpdate(deniedAddresses, DENIED_V4_CIDR_LIST_MAP_NAME)
+				err = m.cidrListUpdate(addr, DENIED_V4_CIDR_LIST_MAP_NAME)
 				if err != nil {
 					return err
 				}
@@ -441,16 +441,14 @@ func (m *Manager) cidrListDeleteKey(mapName string, key []byte) error {
 	return nil
 }
 
-func (m *Manager) cidrListUpdate(addresses []IPAddress, mapName string) error {
-	for _, addr := range addresses {
-		cidr_list, err := m.mod.GetMap(mapName)
-		if err != nil {
-			return err
-		}
-		err = cidr_list.Update(addr.key, uint8(0))
-		if err != nil {
-			return err
-		}
+func (m *Manager) cidrListUpdate(addr IPAddress, mapName string) error {
+	cidr_list, err := m.mod.GetMap(mapName)
+	if err != nil {
+		return err
+	}
+	err = cidr_list.Update(addr.key, uint8(0))
+	if err != nil {
+		return err
 	}
 	return nil
 }
