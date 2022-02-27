@@ -82,17 +82,18 @@ func Test_updateDNSCache_noNeedUpdate(t *testing.T) {
 }
 
 func Test_updateDNSCache_needUpdate(t *testing.T) {
-	ipAddr1 := IPAddress{address: net.ParseIP("10.0.1.1")}
-	ipAddr1.ipAddressToBPFMapKey()
-	ipAddr2 := IPAddress{address: net.ParseIP("192.168.1.1")}
-	ipAddr2.ipAddressToBPFMapKey()
-	ipAddr3 := IPAddress{address: net.ParseIP("172.25.1.1")}
-	ipAddr3.ipAddressToBPFMapKey()
+	cidr1 := "10.0.1.1/32"
+	cidr2 := "192.168.1.1/32"
+	cidr3 := "172.25.1.1/32"
+
+	ipAddr1, _ := cidrToBPFMapKey(cidr1)
+	ipAddr2, _ := cidrToBPFMapKey(cidr2)
+	ipAddr3, _ := cidrToBPFMapKey(cidr3)
 
 	tests := []struct {
-		name            string
-		caches          []DomainCache
-		deniedAddressed []IPAddress
+		name         string
+		caches       []DomainCache
+		newAddresses []IPAddress
 	}{
 		{
 			name: "Remove the IP address from the map, as it will need to be updated if the IP address changes.",
@@ -100,34 +101,31 @@ func Test_updateDNSCache_needUpdate(t *testing.T) {
 				{key: ipAddr1.key, mapName: DENIED_V4_CIDR_LIST_MAP_NAME},
 				{key: ipAddr2.key, mapName: DENIED_V4_CIDR_LIST_MAP_NAME},
 			},
-			deniedAddressed: []IPAddress{
-				{address: net.ParseIP("10.0.1.1")},
-				{address: net.ParseIP("172.25.1.1")},
+			newAddresses: []IPAddress{
+				ipAddr1,
+				ipAddr3,
 			},
 		},
 	}
 
 	testConfig := config.DefaultConfig()
-	testConfig.Network.CIDR = config.CIDRConfig{Deny: []string{"10.0.1.1/32", "192.168.1.1/32"}}
+	testConfig.Network.CIDR = config.CIDRConfig{Deny: []string{cidr1, cidr2}}
+	mgr := createManager(testConfig)
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			for i, ipaddr := range test.deniedAddressed {
-				test.deniedAddressed[i].key = ipaddr.ipAddressToBPFMapKey()
-			}
-
-			mgr := createManager(testConfig)
-
-			assert.Equal(t, nil, mgr.updateDNSCache(test.caches, test.deniedAddressed))
+			assert.Equal(t, nil, mgr.updateDNSCache(test.caches, test.newAddresses))
 
 			bpfmap, err := mgr.mod.GetMap(DENIED_V4_CIDR_LIST_MAP_NAME)
 			if err != nil {
 				t.Errorf("cannot open BPF Map: %s", err)
 			}
 
+			// After name resolution, the ipAddr2 address was not included, so it should have been removed.
 			_, err = bpfmap.GetValue(ipAddr2.key, 1)
 			assert.NotEqual(t, nil, err)
 
+			// The ipAddr1 has not changed, so the map is still available.
 			_, err = bpfmap.GetValue(ipAddr1.key, 1)
 			assert.Equal(t, nil, err)
 		})
@@ -135,52 +133,49 @@ func Test_updateDNSCache_needUpdate(t *testing.T) {
 }
 
 func Test_findOldCache(t *testing.T) {
-	ipAddr1 := IPAddress{address: net.ParseIP("10.0.1.1")}
-	ipAddr1.ipAddressToBPFMapKey()
-	ipAddr2 := IPAddress{address: net.ParseIP("192.168.1.1")}
-	ipAddr2.ipAddressToBPFMapKey()
-	ipAddr3 := IPAddress{address: net.ParseIP("172.25.1.1")}
-	ipAddr3.ipAddressToBPFMapKey()
+	cidr1 := "10.0.1.1/32"
+	cidr2 := "192.168.1.1/32"
+	cidr3 := "172.25.1.1/32"
+
+	ipAddr1, _ := cidrToBPFMapKey(cidr1)
+	ipAddr2, _ := cidrToBPFMapKey(cidr2)
+	ipAddr3, _ := cidrToBPFMapKey(cidr3)
 
 	tests := []struct {
-		name            string
-		caches          []DomainCache
-		deniedAddressed []IPAddress
-		expected        []DomainCache
+		name         string
+		caches       []DomainCache
+		newAddresses []IPAddress
+		expected     []DomainCache
 	}{
 		{
-			name: "If the IP address does not change, there is no need to update it.",
+			name: "The IP address has not changed, there is no cache to be deleted.",
 			caches: []DomainCache{
 				{key: ipAddr1.key, mapName: DENIED_V4_CIDR_LIST_MAP_NAME},
 				{key: ipAddr2.key, mapName: DENIED_V4_CIDR_LIST_MAP_NAME},
 			},
-			deniedAddressed: []IPAddress{
-				{address: net.ParseIP("10.0.1.1")},
-				{address: net.ParseIP("192.168.1.1")},
+			newAddresses: []IPAddress{
+				ipAddr1,
+				ipAddr2,
 			},
 			expected: []DomainCache{},
 		},
 		{
-			name: "If the IP address changes, it need to be update.",
+			name: "The address of ipAddr2 is not included, it should be removed from the cache.",
 			caches: []DomainCache{
 				{key: ipAddr1.key, mapName: DENIED_V4_CIDR_LIST_MAP_NAME},
-				{key: ipAddr3.key, mapName: DENIED_V4_CIDR_LIST_MAP_NAME},
+				{key: ipAddr2.key, mapName: DENIED_V4_CIDR_LIST_MAP_NAME},
 			},
-			deniedAddressed: []IPAddress{
-				{address: net.ParseIP("10.0.1.1")},
-				{address: net.ParseIP("192.168.1.1")},
+			newAddresses: []IPAddress{
+				ipAddr1,
+				ipAddr3,
 			},
-			expected: []DomainCache{{key: ipAddr3.key, mapName: DENIED_V4_CIDR_LIST_MAP_NAME}},
+			expected: []DomainCache{{key: ipAddr2.key, mapName: DENIED_V4_CIDR_LIST_MAP_NAME}},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			for i, ipaddr := range test.deniedAddressed {
-				test.deniedAddressed[i].key = ipaddr.ipAddressToBPFMapKey()
-			}
-
-			assert.Equal(t, test.expected, findOldCache(test.caches, test.deniedAddressed))
+			assert.Equal(t, test.expected, findOldCache(test.caches, test.newAddresses))
 		})
 	}
 }
@@ -248,4 +243,32 @@ func Test_domainNameToBPFMapKey(t *testing.T) {
 			assert.Equal(t, test.expected, addrs)
 		})
 	}
+}
+
+func loadFixtureConfig(path string) *config.Config {
+	conf, err := config.NewConfig(path)
+	if err != nil {
+		panic(err)
+	}
+	return conf
+}
+
+func createManager(conf *config.Config) Manager {
+	mod, err := setupBPFProgram()
+	if err != nil {
+		panic(err)
+	}
+
+	mgr := Manager{
+		mod:    mod,
+		config: conf,
+		cache:  make(map[string][]DomainCache),
+	}
+
+	err = mgr.SetConfigToMap()
+	if err != nil {
+		panic(err)
+	}
+
+	return mgr
 }
