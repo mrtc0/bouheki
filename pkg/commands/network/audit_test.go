@@ -1,3 +1,5 @@
+// +build integration
+
 package network
 
 import (
@@ -9,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mrtc0/bouheki/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -548,32 +549,4 @@ func runAuditWithOnce(configPath string, execCmd []string, eventsChannel chan []
 		manager: mgr,
 		cmd:     cmd,
 	}
-}
-
-func loadFixtureConfig(path string) *config.Config {
-	conf, err := config.NewConfig(path)
-	if err != nil {
-		panic(err)
-	}
-	return conf
-}
-
-func createManager(conf *config.Config) Manager {
-	mod, err := setupBPFProgram()
-	if err != nil {
-		panic(err)
-	}
-
-	mgr := Manager{
-		mod:    mod,
-		config: conf,
-		cache:  make(map[string][]DomainCache),
-	}
-
-	err = mgr.SetConfigToMap()
-	if err != nil {
-		panic(err)
-	}
-
-	return mgr
 }
