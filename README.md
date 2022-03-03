@@ -154,3 +154,8 @@ $ make build
 ```shell
 $ make test && make test/integration
 ```
+
+# LICENSE
+
+bouheki's userspace program is licensed under MIT License.  
+eBPF programs inside [pkg/bpf directory](pkg/bpf) are licensed under [GNU General Public License version 2](./pkg/bpf/LICENSE.md).  
