@@ -55,9 +55,9 @@ type LogConfig struct {
 }
 
 type Config struct {
-	Network NetworkConfig
-	RestrictedFileAccess
-	Log LogConfig
+	Network              NetworkConfig
+	RestrictedFileAccess `yaml:"files"`
+	Log                  LogConfig
 }
 
 func DefaultConfig() *Config {

@@ -48,11 +48,24 @@ func RunAudit(conf *config.Config) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	map_denied_files, err := mod.GetMap(DENIED_FILES_MAP_NAME)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	allowed_paths := conf.RestrictedFileAccess.Allow
 
 	for i, path := range allowed_paths {
 		err = map_allowed_files.Update(uint8(i), []byte(path))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	denied_paths := conf.RestrictedFileAccess.Deny
+
+	for i, path := range denied_paths {
+		err = map_denied_files.Update(uint8(i), []byte(path))
 		if err != nil {
 			log.Fatal(err)
 		}
