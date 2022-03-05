@@ -154,15 +154,18 @@ func RunAudit(conf *config.Config) {
 			log.Error(err)
 		}
 
-		auditLog := NewAuditLog(header, body)
+		auditLog := newAuditLog(header, body)
 		auditLog.Info()
 	}
 }
 
-func NewAuditLog(header eventHeader, body detectEvent) log.RestrictedNetworkLog {
-	var addr string
-	var port uint16
-	var socktype uint8
+func newAuditLog(header eventHeader, body detectEvent) log.RestrictedNetworkLog {
+	var (
+		addr     string
+		port     uint16
+		socktype uint8
+	)
+
 	if header.EventType == BLOCKED_IPV6 {
 		body := body.(detectEventIPv6)
 		port = body.DstPort
