@@ -16,21 +16,24 @@ $(BPF_BUILDDIR)/%.bpf.o: pkg/bpf/c/%.bpf.c $(wildcard bpf/*.h) | $(BPF_BUILDDIR)
 .PHONY: bpf-restricted-network
 bpf-restricted-network: $(BPF_BUILDDIR)/restricted-network.bpf.o
 
+.PHONY: bpf-restricted-file
+bpf-restricted-file: $(BPF_BUILDDIR)/restricted-file.bpf.o
+
 .PHONY: vmlinux
 vmlinux:
 	$(shell bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h)
 
 .PHONY: build
-build: bpf-restricted-network
+build: bpf-restricted-network bpf-restricted-file
 	$(CGOFLAG) go build -ldflags '-w -s' -o bouheki cmd/bouheki/bouheki.go
 
 .PHONY: test
-test: bpf-restricted-network
+test: bpf-restricted-network bpf-restricted-file
 	which gotestsum || go install gotest.tools/gotestsum@latest
 	CGO_LDFLAGS="-lbpf" sudo -E gotestsum -- --mod=vendor -bench=^$$ -race ./...
 
 .PHONY: test/integration
-test/integration: bpf-restricted-network
+test/integration: bpf-restricted-network bpf-restricted-file
 	which gotestsum || go install gotest.tools/gotestsum@latest
 	CGO_LDFLAGS="-lbpf" sudo -E gotestsum -- --tags=integration --mod=vendor -bench=^$$ -race ./...
 
