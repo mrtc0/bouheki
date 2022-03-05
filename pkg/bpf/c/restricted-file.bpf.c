@@ -8,12 +8,12 @@
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
 #define FILE_NAME_LEN	32
-#define PATH_LEN 256
 #define NAME_MAX 255
 
 struct file_path {
-    unsigned char path[PATH_LEN];
+    unsigned char path[NAME_MAX];
 };
+
 
 struct callback_ctx {
     unsigned char *path;
@@ -21,6 +21,11 @@ struct callback_ctx {
 };
 
 struct file_open_audit_event {
+    u64 cgroup;
+    u32 pid;
+    char nodename[NEW_UTS_LEN + 1];
+    char task[TASK_COMM_LEN];
+    char parent_task[TASK_COMM_LEN];
     unsigned char path[NAME_MAX];
 };
 
@@ -47,15 +52,24 @@ static u64 cb_check_path(struct bpf_map *map, u32 *key, struct file_path *map_pa
 SEC("lsm/file_open")
 int BPF_PROG(restricted_file_open, struct file *file)
 {
-    char task[TASK_COMM_LEN];
-
-    bpf_get_current_comm(&task, sizeof(task));
-
+    struct task_struct *current_task;
+    struct uts_namespace *uts_ns;
+    struct nsproxy *nsproxy;
     struct file *fp;
     struct dentry *dentry;
     const __u8 *filename;
     struct file_open_audit_event event = {};
     int ret = -1;
+
+    current_task = (struct task_struct *)bpf_get_current_task();
+    BPF_CORE_READ_INTO(&nsproxy, current_task, nsproxy);
+    BPF_CORE_READ_INTO(&uts_ns, nsproxy, uts_ns);
+    BPF_CORE_READ_INTO(&event.nodename, uts_ns, name.nodename);
+    event.cgroup = bpf_get_current_cgroup_id();
+    event.pid = (u32)(bpf_get_current_pid_tgid() >> 32);
+    bpf_get_current_comm(&event.task, sizeof(event.task));
+    struct task_struct *parent_task = BPF_CORE_READ(current_task, real_parent);
+    bpf_probe_read_kernel_str(&event.parent_task, sizeof(event.parent_task), &parent_task->comm);
 
     if (bpf_d_path(&file->f_path, event.path, NAME_MAX) < 0) {
         return 0;
