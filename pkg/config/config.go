@@ -16,6 +16,11 @@ type NetworkConfig struct {
 	GID     GIDConfig     `yaml:"gid"`
 }
 
+type RestrictedFileAccess struct {
+	Allow []string `yaml:"allow"`
+	Deny  []string `yaml:"deny"`
+}
+
 type DomainConfig struct {
 	Allow    []string `yaml:"allow"`
 	Deny     []string `yaml:"deny"`
@@ -51,7 +56,8 @@ type LogConfig struct {
 
 type Config struct {
 	Network NetworkConfig
-	Log     LogConfig
+	RestrictedFileAccess
+	Log LogConfig
 }
 
 func DefaultConfig() *Config {
@@ -64,6 +70,10 @@ func DefaultConfig() *Config {
 			Domain:  DomainConfig{Allow: []string{}, Deny: []string{}, Interval: 5},
 			UID:     UIDConfig{Allow: []uint{}, Deny: []uint{}},
 			GID:     GIDConfig{Allow: []uint{}, Deny: []uint{}},
+		},
+		RestrictedFileAccess: RestrictedFileAccess{
+			Allow: []string{"/"},
+			Deny:  []string{},
 		},
 		Log: LogConfig{
 			Format: "json",
