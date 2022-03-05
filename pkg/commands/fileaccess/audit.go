@@ -7,7 +7,11 @@ import (
 	"github.com/mrtc0/bouheki/pkg/bpf"
 	log "github.com/mrtc0/bouheki/pkg/log"
 )
-import "github.com/mrtc0/bouheki/pkg/config"
+import (
+	"fmt"
+
+	"github.com/mrtc0/bouheki/pkg/config"
+)
 
 const (
 	BPF_OBJECT_NAME        = "restricted-file"
@@ -39,40 +43,24 @@ func RunAudit(conf *config.Config) {
 		log.Fatal(err)
 	}
 
-	prog, err := mod.GetProgram(BPF_PROGRAM_NAME)
+	mgr := Manager{
+		mod:    mod,
+		config: conf,
+	}
+
+	mgr.SetConfigToMap()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	map_allowed_files, err := mod.GetMap(ALLOWED_FILES_MAP_NAME)
-	if err != nil {
-		log.Fatal(err)
-	}
-	map_denied_files, err := mod.GetMap(DENIED_FILES_MAP_NAME)
-	if err != nil {
-		log.Fatal(err)
-	}
+	mgr.Attach()
 
-	allowed_paths := conf.RestrictedFileAccess.Allow
+	eventChannel := make(chan []byte)
+	mgr.Start(eventChannel)
 
-	for i, path := range allowed_paths {
-		err = map_allowed_files.Update(uint8(i), []byte(path))
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	denied_paths := conf.RestrictedFileAccess.Deny
-
-	for i, path := range denied_paths {
-		err = map_denied_files.Update(uint8(i), []byte(path))
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	_, err = prog.AttachLSM()
-	if err != nil {
-		log.Fatal(err)
+	for {
+		eventBytes := <-eventChannel
+		fmt.Printf("%#v\n", eventBytes)
+		fmt.Printf("%s\n", string(eventBytes))
 	}
 }
