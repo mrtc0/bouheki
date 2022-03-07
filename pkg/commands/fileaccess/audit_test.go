@@ -4,6 +4,8 @@
 package fileaccess
 
 import (
+	"fmt"
+	"os"
 	"os/exec"
 	"testing"
 	"time"
@@ -48,6 +50,52 @@ func TestAudit_DenyAccess(t *testing.T) {
 
 	err := exec.Command("cat", "/etc/passwd").Run()
 	assert.Nil(t, err)
+}
+
+func TestAudit_Container(t *testing.T) {
+	be_blocked_path := "/etc/hosts"
+	timeout := time.After(10 * time.Second)
+	done := make(chan bool)
+	conf := config.DefaultConfig()
+	conf.RestrictedFileAccess.Mode = "block"
+	conf.RestrictedFileAccess.Target = "container"
+	conf.RestrictedFileAccess.Deny = []string{be_blocked_path}
+	hostname, err := os.Hostname()
+	if err != nil {
+		t.Fatalf("can not get hostname: %s", err)
+	}
+
+	commands := []string{
+		"/bin/bash",
+		"-c",
+		fmt.Sprintf("/usr/bin/docker run --rm ubuntu:latest cat %s", be_blocked_path),
+	}
+	eventsChannel := make(chan []byte)
+	runAuditWithOnce(conf, commands, eventsChannel)
+
+	go func() {
+		for {
+			eventBytes := <-eventsChannel
+
+			event, err := parseEvent(eventBytes)
+			assert.Nil(t, err)
+
+			if be_blocked_path == path2string(event.Path) {
+				assert.Equal(t, int32(-1), event.Ret)
+				assert.NotEqual(t, len(nodename2string(event.Nodename)), hostname)
+				assert.Equal(t, be_blocked_path, path2string(event.Path))
+				done <- true
+				break
+			}
+		}
+	}()
+
+	select {
+	case <-timeout:
+		t.Fatalf("Timeout. %s has not accessed.", be_blocked_path)
+	case <-done:
+		t.Log("OK")
+	}
 }
 
 type TestAuditManager struct {
