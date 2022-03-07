@@ -32,6 +32,7 @@ struct file_open_audit_event {
 
 struct file_open_bouheki_config {
     u32 mode;
+    u32 target;
 };
 
 struct {
@@ -60,6 +61,7 @@ int BPF_PROG(restricted_file_open, struct file *file)
 {
     struct task_struct *current_task;
     struct uts_namespace *uts_ns;
+    struct mnt_namespace *mnt_ns;
     struct nsproxy *nsproxy;
     struct file *fp;
     struct dentry *dentry;
@@ -68,11 +70,14 @@ int BPF_PROG(restricted_file_open, struct file *file)
     int index = 0;
     struct file_open_bouheki_config *config = (struct file_open_bouheki_config *)bpf_map_lookup_elem(&fileopen_bouheki_config, &index);
     int ret = -1;
+    unsigned int inum;
 
     current_task = (struct task_struct *)bpf_get_current_task();
     BPF_CORE_READ_INTO(&nsproxy, current_task, nsproxy);
     BPF_CORE_READ_INTO(&uts_ns, nsproxy, uts_ns);
     BPF_CORE_READ_INTO(&event.nodename, uts_ns, name.nodename);
+    BPF_CORE_READ_INTO(&mnt_ns, nsproxy, mnt_ns);
+    BPF_CORE_READ_INTO(&inum, mnt_ns, ns.inum);
     event.cgroup = bpf_get_current_cgroup_id();
     event.pid = (u32)(bpf_get_current_pid_tgid() >> 32);
     bpf_get_current_comm(&event.task, sizeof(event.task));
@@ -99,9 +104,16 @@ int BPF_PROG(restricted_file_open, struct file *file)
     }
 
 out:
+    // I want to call is_container(), but the stack size is too large to load the BPF program.
+    // We have no choice but to write an equivalent process...
+    if (config && config->target == TARGET_CONTAINER && inum == 0xF0000000) {
+        return 0;
+    }
+
     if (config && config->mode == MODE_MONITOR) {
         ret = 0;
     }
+
     event.ret = ret;
     bpf_perf_event_output((void *)ctx, &fileopen_events, BPF_F_CURRENT_CPU, &event, sizeof(event));
     return ret;

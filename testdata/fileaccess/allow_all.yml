@@ -6,6 +6,7 @@ network:
       - 0.0.0.0/0
 files:
   mode: block
+  target: container
   allow:
     - '/'
   deny:

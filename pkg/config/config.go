@@ -17,9 +17,10 @@ type NetworkConfig struct {
 }
 
 type RestrictedFileAccess struct {
-	Mode  string   `yaml:"mode"`
-	Allow []string `yaml:"allow"`
-	Deny  []string `yaml:"deny"`
+	Mode   string   `yaml:"mode"`
+	Target string   `yaml:"target"`
+	Allow  []string `yaml:"allow"`
+	Deny   []string `yaml:"deny"`
 }
 
 type DomainConfig struct {
@@ -73,9 +74,10 @@ func DefaultConfig() *Config {
 			GID:     GIDConfig{Allow: []uint{}, Deny: []uint{}},
 		},
 		RestrictedFileAccess: RestrictedFileAccess{
-			Mode:  "monitor",
-			Allow: []string{"/"},
-			Deny:  []string{},
+			Mode:   "monitor",
+			Target: "host",
+			Allow:  []string{"/"},
+			Deny:   []string{},
 		},
 		Log: LogConfig{
 			Format: "json",
@@ -121,6 +123,14 @@ func (c *Config) IsOnlyContainer() bool {
 
 func (c *Config) IsFileAccessBlock() bool {
 	if c.RestrictedFileAccess.Mode == "block" {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (c *Config) IsFileAccessOnlyContainer() bool {
+	if c.RestrictedFileAccess.Target == "container" {
 		return true
 	} else {
 		return false

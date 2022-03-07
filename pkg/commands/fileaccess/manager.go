@@ -13,6 +13,9 @@ const (
 	FILEACCESS_CONFIG = "fileopen_bouheki_config"
 	MODE_MONITOR      = uint32(0)
 	MODE_BLOCK        = uint32(1)
+
+	TARGET_HOST      = uint32(0)
+	TARGET_CONTAINER = uint32(1)
 )
 
 type Manager struct {
@@ -53,7 +56,7 @@ func (m *Manager) Attach() error {
 }
 
 func (m *Manager) SetConfigToMap() error {
-	err := m.setMode()
+	err := m.setModeAndTarget()
 	if err != nil {
 		return err
 	}
@@ -88,8 +91,8 @@ func (m *Manager) SetConfigToMap() error {
 	return nil
 }
 
-func (m *Manager) setMode() error {
-	key := make([]byte, 4)
+func (m *Manager) setModeAndTarget() error {
+	key := make([]byte, 8)
 	configMap, err := m.mod.GetMap(FILEACCESS_CONFIG)
 	if err != nil {
 		return err
@@ -99,6 +102,12 @@ func (m *Manager) setMode() error {
 		binary.LittleEndian.PutUint32(key[0:4], MODE_BLOCK)
 	} else {
 		binary.LittleEndian.PutUint32(key[0:4], MODE_MONITOR)
+	}
+
+	if m.config.IsFileAccessOnlyContainer() {
+		binary.LittleEndian.PutUint32(key[4:8], TARGET_CONTAINER)
+	} else {
+		binary.LittleEndian.PutUint32(key[4:8], TARGET_HOST)
 	}
 
 	err = configMap.Update(uint8(0), key)
