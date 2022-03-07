@@ -1,0 +1,15 @@
+network:
+  mode: block
+  target: host
+  cidr:
+    allow:
+      - 0.0.0.0/0
+files:
+  mode: block
+  allow:
+    - '/'
+  deny:
+    - '/etc/passwd'
+    - '/etc/test'
+log:
+  format: json
