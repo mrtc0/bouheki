@@ -114,6 +114,17 @@ func (l *RestrictedNetworkLog) Info() {
 	}).Info("Traffic is trapped in the filter.")
 }
 
+func (l *RestrictedFileAccessLog) Info() {
+	log.WithFields(logrus.Fields{
+		"Action":     l.Action,
+		"Hostname":   l.Hostname,
+		"PID":        l.PID,
+		"Comm":       l.Comm,
+		"ParentComm": l.ParentComm,
+		"Path":       l.Path,
+	}).Info("File access is trapped in th filter.")
+}
+
 type RestrictedFileAccessLog struct {
 	AuditEventLog
 	Path string

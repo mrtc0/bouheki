@@ -10,7 +10,6 @@ import (
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/mrtc0/bouheki/pkg/config"
 )
@@ -80,11 +79,26 @@ func RunAudit(conf *config.Config) {
 			log.Error(err)
 		}
 
-		fmt.Printf("%#v\n", event)
-		fmt.Printf("%s\n", comm2string(event.Command))
-		fmt.Printf("%s\n", comm2string(event.ParentCommand))
-		fmt.Printf("%s\n", path2string(event.Path))
+		auditLog := newAuditLog(event)
+		auditLog.Info()
 	}
+}
+
+func newAuditLog(event auditLog) log.RestrictedFileAccessLog {
+	auditEvent := log.AuditEventLog{
+		Action:     "BLOCK", // TODO
+		Hostname:   nodename2string(event.Nodename),
+		PID:        event.PID,
+		Comm:       comm2string(event.Command),
+		ParentComm: comm2string(event.ParentCommand),
+	}
+
+	fileAccessLog := log.RestrictedFileAccessLog{
+		AuditEventLog: auditEvent,
+		Path:          path2string(event.Path),
+	}
+
+	return fileAccessLog
 }
 
 func parseEvent(eventBytes []byte) (auditLog, error) {

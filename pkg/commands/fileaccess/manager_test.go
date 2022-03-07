@@ -125,5 +125,10 @@ func createManager(conf *config.Config) Manager {
 		config: conf,
 	}
 
+	err = mgr.SetConfigToMap()
+	if err != nil {
+		panic(err)
+	}
+
 	return mgr
 }
