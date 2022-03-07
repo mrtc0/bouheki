@@ -20,6 +20,7 @@ func TestAudit_DenyAccess(t *testing.T) {
 	done := make(chan bool)
 	conf := config.DefaultConfig()
 	conf.RestrictedFileAccess.Mode = "block"
+	conf.RestrictedFileAccess.Target = "host"
 	conf.RestrictedFileAccess.Deny = []string{be_blocked_path}
 	eventsChannel := make(chan []byte)
 	auditManager := runAuditWithOnce(conf, []string{"cat", be_blocked_path}, eventsChannel)
@@ -82,7 +83,7 @@ func TestAudit_Container(t *testing.T) {
 
 			if be_blocked_path == path2string(event.Path) {
 				assert.Equal(t, int32(-1), event.Ret)
-				assert.NotEqual(t, len(nodename2string(event.Nodename)), hostname)
+				assert.NotEqual(t, nodename2string(event.Nodename), hostname)
 				assert.Equal(t, be_blocked_path, path2string(event.Path))
 				done <- true
 				break
