@@ -28,6 +28,7 @@ const (
 type auditLog struct {
 	CGroupID      uint64
 	PID           uint32
+	Ret           int32
 	Nodename      [NEW_UTS_LEN + 1]byte
 	Command       [TASK_COMM_LEN]byte
 	ParentCommand [TASK_COMM_LEN]byte
@@ -86,7 +87,7 @@ func RunAudit(conf *config.Config) {
 
 func newAuditLog(event auditLog) log.RestrictedFileAccessLog {
 	auditEvent := log.AuditEventLog{
-		Action:     "BLOCK", // TODO
+		Action:     ret2action(event.Ret),
 		Hostname:   nodename2string(event.Nodename),
 		PID:        event.PID,
 		Comm:       comm2string(event.Command),
@@ -110,6 +111,14 @@ func parseEvent(eventBytes []byte) (auditLog, error) {
 	}
 
 	return event, nil
+}
+
+func ret2action(ret int32) string {
+	if ret == 0 {
+		return "ALLOWED"
+	} else {
+		return "BLOCKED"
+	}
 }
 
 func comm2string(commBytes [16]byte) string {

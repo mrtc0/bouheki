@@ -1,11 +1,18 @@
 package fileaccess
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/aquasecurity/libbpfgo"
 	"github.com/mrtc0/bouheki/pkg/config"
 	log "github.com/mrtc0/bouheki/pkg/log"
+)
+
+const (
+	FILEACCESS_CONFIG = "fileopen_bouheki_config"
+	MODE_MONITOR      = uint32(0)
+	MODE_BLOCK        = uint32(1)
 )
 
 type Manager struct {
@@ -46,6 +53,11 @@ func (m *Manager) Attach() error {
 }
 
 func (m *Manager) SetConfigToMap() error {
+	err := m.setMode()
+	if err != nil {
+		return err
+	}
+
 	map_allowed_files, err := m.mod.GetMap(ALLOWED_FILES_MAP_NAME)
 	if err != nil {
 		return err
@@ -71,6 +83,27 @@ func (m *Manager) SetConfigToMap() error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (m *Manager) setMode() error {
+	key := make([]byte, 4)
+	configMap, err := m.mod.GetMap(FILEACCESS_CONFIG)
+	if err != nil {
+		return err
+	}
+
+	if m.config.IsFileAccessBlock() {
+		binary.LittleEndian.PutUint32(key[0:4], MODE_BLOCK)
+	} else {
+		binary.LittleEndian.PutUint32(key[0:4], MODE_MONITOR)
+	}
+
+	err = configMap.Update(uint8(0), key)
+	if err != nil {
+		return err
 	}
 
 	return nil

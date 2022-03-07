@@ -23,10 +23,15 @@ struct callback_ctx {
 struct file_open_audit_event {
     u64 cgroup;
     u32 pid;
+    int ret;
     char nodename[NEW_UTS_LEN + 1];
     char task[TASK_COMM_LEN];
     char parent_task[TASK_COMM_LEN];
     unsigned char path[NAME_MAX];
+};
+
+struct file_open_bouheki_config {
+    u32 mode;
 };
 
 struct {
@@ -35,6 +40,7 @@ struct {
 	__uint(value_size, sizeof(u32));
 } fileopen_events SEC(".maps");
 
+BPF_HASH(fileopen_bouheki_config, u32, struct file_open_bouheki_config, 256);
 BPF_HASH(allowed_access_files, u32, struct file_path, 256);
 BPF_HASH(denied_access_files, u32, struct file_path, 256);
 
@@ -59,6 +65,8 @@ int BPF_PROG(restricted_file_open, struct file *file)
     struct dentry *dentry;
     const __u8 *filename;
     struct file_open_audit_event event = {};
+    int index = 0;
+    struct file_open_bouheki_config *config = (struct file_open_bouheki_config *)bpf_map_lookup_elem(&fileopen_bouheki_config, &index);
     int ret = -1;
 
     current_task = (struct task_struct *)bpf_get_current_task();
@@ -74,8 +82,6 @@ int BPF_PROG(restricted_file_open, struct file *file)
     if (bpf_d_path(&file->f_path, event.path, NAME_MAX) < 0) {
         return 0;
     }
-
-    // bpf_printk("%s open %s\n", task, full_path);
 
     struct callback_ctx cb = { .path = event.path, .found = false};
     cb.found = false;
@@ -93,6 +99,10 @@ int BPF_PROG(restricted_file_open, struct file *file)
     }
 
 out:
+    if (config && config->mode == MODE_MONITOR) {
+        ret = 0;
+    }
+    event.ret = ret;
     bpf_perf_event_output((void *)ctx, &fileopen_events, BPF_F_CURRENT_CPU, &event, sizeof(event));
     return ret;
 }
