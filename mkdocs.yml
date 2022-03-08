@@ -1,0 +1,49 @@
+site_name: bouheki
+site_url: https://mrtc0.github.io/bouheki/
+site_description: bouheki is a MAC(Mandatory Access Control) type of security audit tool.
+docs_dir: docs/
+repo_name: GitHub
+repo_url: https://github.com/mrtc0/bouheki
+
+theme:
+  name: material
+  palette:
+    primary: teal
+  language: 'en'
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.details
+  - footnotes
+  - attr_list
+  - def_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+
+plugins:
+  - search
+
+nav:
+  - HOME: index.md
+  - Getting started:
+    - Overview: getting-started/overview.md
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+  - Configuration:
+    - Configuration: configuration/configuration.md
+    - Network Restriction:
+      - Configuration: configuration/network-restriction/configuration.md
+      - Examples: configuration/network-restriction/examples.md
+    - File Access Restriction:
+      - Configuration: configuration/file-access-restriction/configuration.md
+      - Examples: configuration/file-access-restriction/examples.md
+  - Development:
+    - Setup: development/setup.md
+    - Build and Test: development/build.md
