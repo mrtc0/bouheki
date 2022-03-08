@@ -3,6 +3,7 @@ package logger
 import (
 	"os"
 
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -83,4 +84,48 @@ func Error(err error) {
 
 func WithFields(fields log.Fields) *log.Entry {
 	return log.WithFields(fields)
+}
+
+type AuditEventLog struct {
+	Action     string
+	Hostname   string
+	PID        uint32
+	Comm       string
+	ParentComm string
+}
+
+type RestrictedNetworkLog struct {
+	AuditEventLog
+	Addr     string
+	Port     uint16
+	Protocol string
+}
+
+func (l *RestrictedNetworkLog) Info() {
+	log.WithFields(logrus.Fields{
+		"Action":     l.Action,
+		"Hostname":   l.Hostname,
+		"PID":        l.PID,
+		"Comm":       l.Comm,
+		"ParentComm": l.ParentComm,
+		"Addr":       l.Addr,
+		"Port":       l.Port,
+		"Protocol":   l.Protocol,
+	}).Info("Traffic is trapped in the filter.")
+}
+
+func (l *RestrictedFileAccessLog) Info() {
+	log.WithFields(logrus.Fields{
+		"Action":     l.Action,
+		"Hostname":   l.Hostname,
+		"PID":        l.PID,
+		"Comm":       l.Comm,
+		"ParentComm": l.ParentComm,
+		"Path":       l.Path,
+	}).Info("File access is trapped in th filter.")
+}
+
+type RestrictedFileAccessLog struct {
+	AuditEventLog
+	Path string
 }

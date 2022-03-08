@@ -8,7 +8,6 @@ import (
 	"github.com/mrtc0/bouheki/pkg/bpf"
 	"github.com/mrtc0/bouheki/pkg/config"
 	log "github.com/mrtc0/bouheki/pkg/log"
-	"github.com/sirupsen/logrus"
 
 	"github.com/aquasecurity/libbpfgo"
 )
@@ -155,32 +154,46 @@ func RunAudit(conf *config.Config) {
 			log.Error(err)
 		}
 
-		var addr string
-		var port uint16
-		var socktype uint8
-		if header.EventType == BLOCKED_IPV6 {
-			body := body.(detectEventIPv6)
-			port = body.DstPort
-			addr = byte2IPv6(body.DstIP)
-			socktype = body.SockType
-		} else {
-			body := body.(detectEventIPv4)
-			port = body.DstPort
-			addr = byte2IPv4(body.DstIP)
-			socktype = body.SockType
-		}
-
-		log.WithFields(logrus.Fields{
-			"Action":     body.ActionResult(),
-			"Hostname":   nodename2string(header.Nodename),
-			"PID":        header.PID,
-			"Comm":       comm2string(header.Command),
-			"ParentComm": comm2string(header.ParentCommand),
-			"Addr":       addr,
-			"Port":       port,
-			"Protocol":   sockTypeToProtocolName(socktype),
-		}).Info("Traffic is trapped in the filter.")
+		auditLog := newAuditLog(header, body)
+		auditLog.Info()
 	}
+}
+
+func newAuditLog(header eventHeader, body detectEvent) log.RestrictedNetworkLog {
+	var (
+		addr     string
+		port     uint16
+		socktype uint8
+	)
+
+	if header.EventType == BLOCKED_IPV6 {
+		body := body.(detectEventIPv6)
+		port = body.DstPort
+		addr = byte2IPv6(body.DstIP)
+		socktype = body.SockType
+	} else {
+		body := body.(detectEventIPv4)
+		port = body.DstPort
+		addr = byte2IPv4(body.DstIP)
+		socktype = body.SockType
+	}
+
+	auditEvent := log.AuditEventLog{
+		Action:     body.ActionResult(),
+		Hostname:   nodename2string(header.Nodename),
+		PID:        header.PID,
+		Comm:       comm2string(header.Command),
+		ParentComm: comm2string(header.ParentCommand),
+	}
+
+	networkLog := log.RestrictedNetworkLog{
+		AuditEventLog: auditEvent,
+		Addr:          addr,
+		Port:          port,
+		Protocol:      sockTypeToProtocolName(socktype),
+	}
+
+	return networkLog
 }
 
 func parseEvent(eventBytes []byte) (eventHeader, detectEvent, error) {

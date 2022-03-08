@@ -16,6 +16,13 @@ type NetworkConfig struct {
 	GID     GIDConfig     `yaml:"gid"`
 }
 
+type RestrictedFileAccess struct {
+	Mode   string   `yaml:"mode"`
+	Target string   `yaml:"target"`
+	Allow  []string `yaml:"allow"`
+	Deny   []string `yaml:"deny"`
+}
+
 type DomainConfig struct {
 	Allow    []string `yaml:"allow"`
 	Deny     []string `yaml:"deny"`
@@ -50,8 +57,9 @@ type LogConfig struct {
 }
 
 type Config struct {
-	Network NetworkConfig
-	Log     LogConfig
+	Network              NetworkConfig
+	RestrictedFileAccess `yaml:"files"`
+	Log                  LogConfig
 }
 
 func DefaultConfig() *Config {
@@ -64,6 +72,12 @@ func DefaultConfig() *Config {
 			Domain:  DomainConfig{Allow: []string{}, Deny: []string{}, Interval: 5},
 			UID:     UIDConfig{Allow: []uint{}, Deny: []uint{}},
 			GID:     GIDConfig{Allow: []uint{}, Deny: []uint{}},
+		},
+		RestrictedFileAccess: RestrictedFileAccess{
+			Mode:   "monitor",
+			Target: "host",
+			Allow:  []string{"/"},
+			Deny:   []string{},
 		},
 		Log: LogConfig{
 			Format: "json",
@@ -89,6 +103,7 @@ func NewConfig(configPath string) (*Config, error) {
 	return config, nil
 }
 
+// TODO: rename
 func (c *Config) IsRestricted() bool {
 	if c.Network.Mode == "block" {
 		return true
@@ -97,8 +112,25 @@ func (c *Config) IsRestricted() bool {
 	}
 }
 
+// TODO: rename
 func (c *Config) IsOnlyContainer() bool {
 	if c.Network.Target == "container" {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (c *Config) IsFileAccessBlock() bool {
+	if c.RestrictedFileAccess.Mode == "block" {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (c *Config) IsFileAccessOnlyContainer() bool {
+	if c.RestrictedFileAccess.Target == "container" {
 		return true
 	} else {
 		return false

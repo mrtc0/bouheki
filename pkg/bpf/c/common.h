@@ -184,3 +184,32 @@ static inline int is_container()
 {
   return !_is_host_mntns();
 }
+
+static inline int strcmp(const unsigned char *a, const unsigned char *b, size_t len)
+{
+  unsigned char c1, c2;
+  size_t i;
+
+  for (i=0; i<len; i++) {
+    c1 = (unsigned char)a[i];
+    c2 = (unsigned char)b[i];
+
+    if (c1 != c2 || c1 == '\0' || c2 == '\0') {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+static __always_inline int strlen(const unsigned char *s, size_t max_len)
+{
+	size_t i;
+
+	for (i = 0; i < max_len; i++) {
+		if (s[i] == '\0')
+			return i;
+	}
+
+	return i;
+}
