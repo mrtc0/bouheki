@@ -1,6 +1,6 @@
-# bouheki: KRSI(eBPF+KRSI) based Linux security auditing tool
+# bouheki: KRSI(eBPF+LSM) based Linux security auditing tool
 
-bouheki is KRSI(eBPF+KRSI) based Linux security auditing tool.  
+bouheki is KRSI(eBPF+LSM) based Linux security auditing tool.  
 Security events can be audited and blocked based on the container of the process, and restrictions can be applied to container environments.
 
 # Features
