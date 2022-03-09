@@ -1,7 +1,7 @@
-# bouheki: Mandatory Access Control type of security audit tool with KRSI(eBPF+KRSI)
+# bouheki: KRSI(eBPF+KRSI) based Linux security auditing tool
 
-bouheki is a MAC(Mandatory Access Control) type of security audit tool.
-KRSI (eBPF+LSM) can be used to control access based on context such as process name.
+bouheki is KRSI(eBPF+KRSI) based Linux security auditing tool.  
+Security events can be audited and blocked based on the container of the process, and restrictions can be applied to container environments.
 
 # Features
 

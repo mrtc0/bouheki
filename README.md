@@ -1,161 +1,22 @@
-# bouheki: Mandatory Access Control type of security audit tool with KRSI(eBPF+KRSI)
+# bouheki: KRSI(eBPF+KRSI) based Linux security auditing tool
 
-bouheki is a MAC(Mandatory Access Control) type of security audit tool.
-KRSI (eBPF+LSM) can be used to control access based on context such as process name.
+bouheki is KRSI(eBPF+KRSI) based Linux security auditing tool.  
+Security events can be audited and blocked based on the container of the process, and restrictions can be applied to container environments.
 
 # Features
 
 * Restriction rules based on process context, such as command name or UID and more
-* Restrictions limited to containers (hosts are not restricted)
+* Restrictions limited to containers
 * Network Access Control
 * File Access Control
 
 # Getting Started
 
-## 0. Requirements
+https://mrtc0.github.io/bouheki
 
-* Linux Kernel >= 5.8.0
-  * BTF(`CONFIG_DEBUG_INFO_BTF`) must be enabled.
-  * BPF LSM(`CONFIG_LSM` with `bpf`) must be enabled. This parameter can also be changed in the boot parameter.
+# DEMO
 
-See [INSTALL.md](INSTALL.md) for details on installation.
-
-### Linux distributions and supported kernels
-
-| Distro Name | Distro Version | Kernel Version |
-|:-----------:|:--------------:|:--------------:|
-| Ubuntu "Groovy Gorilla"	| 20.10 | 5.8+ |
-| Fedora | 33 | 5.8+ |
-
-## 1. Install
-
-Download latest released binary from https://github.com/mrtc0/bouheki/releases
-
-## 2. Configuration
-
-Write the network restriction policy in YAML.  
-This policy allows access to 10.0.1.1/24 only, but does not allow access to 10.0.1.10/32.
-
-See [config directory](./config) for more configuration examples.
-
-```yaml
-# block.yml
-network:
-  # Block or monitor the network.
-  # If block is specified, communication that matches the policy will be blocked.
-  mode: block # monitor or block. Default: monitor
-  # Restriction to the whole host or to a container
-  # If a container is specified, only the container's communication will be restricted. This is determined by the value of namespace
-  target: host # host or container. Default: host
-  cidr:
-    allow:
-      - 10.0.1.1/24
-      # - 127.0.0.1/24
-    # Override "allow" list with exceptions. Default: []
-    deny: # []
-      - 10.0.1.10/32
-  # Restrictions by domain.
-  domain:
-    allow: []
-    deny: # []
-      - example.com
-  # Restrictions by command name (optional).
-  command:
-    # Default: empty. All command will be allowed.
-    allow: []
-    # - curl
-    # Default: empty. All command will be allowed.
-    deny: []
-    #  - wget
-    #  - nc
-  # Restrictions by UID (optional).
-  uid:
-    allow: []
-    deny: []
-  # Restrictions by GID (optional).
-  gid:
-    allow: []
-      # - 0
-    deny: []
-      # 1000
-log:
-  # Log format(json or text). Default: json
-  format: json
-  # Specified log file location. Default: stdout
-  # output: /var/log/bouheki.log.json
-  # Maximum size to rotate (MB)
-  # max_size: 100
-  # Period for which logs are kept
-  # max_age: 365
-```
-
-Run with the policy.
-
-```shell
-$ sudo bouheki --config block.yaml
-```
-
-## 3. Test
-
-```shell
-$ curl -k -I https://10.0.1.1
-HTTP/1.1 200 OK
-
-$ curl -k -I https://10.0.1.10
-curl: (7) Couldn't connect to server
-
-$ curl -k -I https://example.com
-curl: (7) Couldn't connect to server
-```
-
-## 4. Inspect Logs
-
-The log will record the blocked events.
-
-```shell
-{
-  "Action": "BLOCKED",
-  "Addr": "10.0.1.71",
-  "Comm": "curl",
-  "Hostname": "sandbox",
-  "PID": 790791,
-  "ParentComm": "bash",
-  "Port": 443,
-  "Protocol": "TCP",
-  "level": "info",
-  "msg": "Traffic is trapped in the filter.",
-  "time": "2021-09-23T12:47:55Z"
-}
-{
-  "Action": "BLOCKED",
-  "Addr": "93.184.216.34",
-  "Comm": "curl",
-  "Hostname": "sandbox",
-  "PID": 790823,
-  "ParentComm": "bash",
-  "Port": 443,
-  "Protocol": "TCP",
-  "level": "info",
-  "msg": "Traffic is trapped in the filter.",
-  "time": "2021-09-23T12:49:29Z"
-}
-```
-
-# Development
-
-```shell
-$ vagrant up && vagrant reload
-$ vagrant ssh
-
-$ cd /opt/go/src/github.com/mrtc0/bouheki/
-$ make build
-```
-
-# Test
-
-```shell
-$ make test && make test/integration
-```
+[![asciicast](https://asciinema.org/a/475371.svg)](https://asciinema.org/a/475371)
 
 # LICENSE
 
