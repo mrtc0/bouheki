@@ -1,12 +1,14 @@
-# bouheki: Tool for Preventing Data Exfiltration with eBPF
+# bouheki: Mandatory Access Control type of security audit tool with KRSI(eBPF+KRSI)
 
-**bouheki** is a KSRI implementation using LSM Hook by eBPF. 
-Flexibility to apply restricted network policies to specific resources such as processes and containers.
+bouheki is a MAC(Mandatory Access Control) type of security audit tool.
+KRSI (eBPF+LSM) can be used to control access based on context such as process name.
 
-# Features and Network Restrictions
+# Features
 
-* While firewalls such as iptables apply to the entire machine, bouheki can be restricted on a per-container or per-process basis.
-* bouheki does not restrict ingress, only egress.
+* Restriction rules based on process context, such as command name or UID and more
+* Restrictions limited to containers (hosts are not restricted)
+* Network Access Control
+* File Access Control
 
 # Getting Started
 
