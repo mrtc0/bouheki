@@ -56,17 +56,30 @@ network:
       - example.com
 ```
 
-#### Monitor all containers network connections
+#### Block network connections of containers
 
-Monitor all communications from containers.
+Allow communication from the host, but block communication from the containers.
 
 ```yaml
 network:
-  mode: monitor
+  mode: block
   target: container
   cidr:
     allow: ['0.0.0.0/0']
+  domain:
+    deny:
+    - example.com
 ```
+
+!!! example
+
+    ```shell
+    vagrant@ubuntu-impish:~$ curl -I https://example.com
+    HTTP/2 200
+
+    vagrant@ubuntu-impish:~$ sudo docker run --rm -it curlimages/curl https://example.com
+    curl: (7) Couldn't connect to server
+    ```
 
 #### Block all connections from curl
 
@@ -76,9 +89,28 @@ network:
   target: container
   cidr:
     allow: ['0.0.0.0/0']
-  commands:
+  command:
     deny: ['curl']
 ```
+
+!!! example
+
+    ```shell
+    vagrant@ubuntu-impish:~$ curl -I https://example.com
+    curl: (6) Could not resolve host: example.com
+
+    vagrant@ubuntu-impish:~$ wget https://example.com -O /dev/null
+    --2022-03-09 14:45:11--  http://example.com/
+    Resolving example.com (example.com)... 93.184.216.34
+    Connecting to example.com (example.com)|93.184.216.34|:80... connected.
+    HTTP request sent, awaiting response... 200 OK
+    Length: 1256 (1.2K) [text/html]
+    Saving to: ‘/dev/null’
+
+    /dev/null               100%[============================>]   1.23K  --.-KB/s    in 0s
+
+    2022-03-09 14:45:12 (70.1 MB/s) - ‘/dev/null’ saved [1256/1256]
+    ```
 
 #### Block all connections by users with UID 1000
 
