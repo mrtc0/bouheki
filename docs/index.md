@@ -12,7 +12,7 @@ KRSI (eBPF+LSM) can be used to control access based on context such as process n
 
 # Demo
 
-TBD
+[![asciicast](https://asciinema.org/a/475371.svg)](https://asciinema.org/a/475371)
 
 # LICENSE
 
