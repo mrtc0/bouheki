@@ -1,9 +1,8 @@
-name: ci 
+name: Deploy documentation
 on:
   push:
     branches:
       - master 
-      - main
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -12,5 +11,12 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3.x
+
       - run: pip install mkdocs-material 
+
+      - name: Configure git user
+        run: |
+          git config user.name "mrtc0"
+          git config user.email "mrtc0@ssrf.in"
+
       - run: mkdocs gh-deploy --force
