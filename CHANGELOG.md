@@ -4,6 +4,30 @@
 
 ### Added
 
+#### Support for file access restrictions [#6](https://github.com/mrtc0/bouheki/pull/7)
+
+File open can now be restricted by attaching lsm/open.  
+For example, Access to `/etc/passwd` and `/etc/test` can be disabled with the following configuration:
+
+```yaml
+network:
+  mode: block
+  target: host
+  cidr:
+    allow:
+      - 0.0.0.0/0
+files:
+  mode: block
+  target: container
+  allow:
+    - '/'
+  deny:
+    - '/etc/passwd'
+    - '/etc/test'
+log:
+  format: json
+```
+
 #### Support for restrictions by domain name [#5](https://github.com/mrtc0/bouheki/pull/5)
 
 Restrictions by domain name are now possible.  
