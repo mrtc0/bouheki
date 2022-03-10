@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/mrtc0/bouheki/pkg/commands"
+	"github.com/mrtc0/bouheki/pkg/audit"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -12,7 +12,7 @@ var (
 )
 
 func main() {
-	app := commands.NewApp(version)
+	app := audit.NewApp(version)
 	err := app.Run(os.Args)
 	if err != nil {
 		log.Fatal(err)

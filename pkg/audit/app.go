@@ -1,12 +1,12 @@
-package commands
+package audit
 
 import (
 	"errors"
 	"os"
 	"os/signal"
 
-	"github.com/mrtc0/bouheki/pkg/commands/fileaccess"
-	"github.com/mrtc0/bouheki/pkg/commands/network"
+	"github.com/mrtc0/bouheki/pkg/audit/fileaccess"
+	"github.com/mrtc0/bouheki/pkg/audit/network"
 	"github.com/mrtc0/bouheki/pkg/config"
 	log "github.com/mrtc0/bouheki/pkg/log"
 	"github.com/mrtc0/bouheki/pkg/utils"
