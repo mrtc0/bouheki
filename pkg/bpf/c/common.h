@@ -87,14 +87,6 @@ struct audit_event_ipv6
   u8 sock_type;
 };
 
-struct bouheki_config
-{
-  enum mode mode;
-  enum target target;
-  int has_allow_command;
-  int has_allow_uid;
-};
-
 struct ipv4_trie_key
 {
   u32 prefixlen;

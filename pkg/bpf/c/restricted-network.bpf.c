@@ -7,8 +7,16 @@
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
+struct network_bouheki_config
+{
+  enum mode mode;
+  enum target target;
+  int has_allow_command;
+  int has_allow_uid;
+};
+
 BPF_RING_BUF(audit_events, AUDIT_EVENTS_RING_SIZE);
-BPF_HASH(bouheki_config, u32, struct bouheki_config, 256);
+BPF_HASH(network_bouheki_config_map, u32, struct network_bouheki_config, 256);
 
 BPF_HASH(allowed_command_list, struct allowed_command_key, u32, 256);
 BPF_HASH(denied_command_list, struct denied_command_key, u32, 256);
@@ -187,8 +195,8 @@ int BPF_PROG(socket_connect, struct socket *sock, struct sockaddr *address,
 
   u32 index = 0;
 
-  struct bouheki_config *c =
-      (struct bouheki_config *)bpf_map_lookup_elem(&bouheki_config, &index);
+  struct network_bouheki_config *c =
+      (struct network_bouheki_config *)bpf_map_lookup_elem(&network_bouheki_config_map, &index);
 
   // Redundant by BPF constraints...
   int has_allow_command = 0;
