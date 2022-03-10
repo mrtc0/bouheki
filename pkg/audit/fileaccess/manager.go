@@ -98,13 +98,13 @@ func (m *Manager) setModeAndTarget() error {
 		return err
 	}
 
-	if m.config.IsFileAccessBlock() {
+	if m.config.IsRestrictedMode("fileaccess") {
 		binary.LittleEndian.PutUint32(key[0:4], MODE_BLOCK)
 	} else {
 		binary.LittleEndian.PutUint32(key[0:4], MODE_MONITOR)
 	}
 
-	if m.config.IsFileAccessOnlyContainer() {
+	if m.config.IsOnlyContainer("fileaccess") {
 		binary.LittleEndian.PutUint32(key[4:8], TARGET_CONTAINER)
 	} else {
 		binary.LittleEndian.PutUint32(key[4:8], TARGET_HOST)

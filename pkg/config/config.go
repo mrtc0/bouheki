@@ -103,36 +103,40 @@ func NewConfig(configPath string) (*Config, error) {
 	return config, nil
 }
 
-// TODO: rename
-func (c *Config) IsRestricted() bool {
-	if c.Network.Mode == "block" {
-		return true
-	} else {
+func (c *Config) IsRestrictedMode(target string) bool {
+	switch target {
+	case "network":
+		if c.Network.Mode == "block" {
+			return true
+		} else {
+			return false
+		}
+	case "fileaccess":
+		if c.RestrictedFileAccess.Mode == "block" {
+			return true
+		} else {
+			return false
+		}
+	default:
 		return false
 	}
 }
 
-// TODO: rename
-func (c *Config) IsOnlyContainer() bool {
-	if c.Network.Target == "container" {
-		return true
-	} else {
-		return false
-	}
-}
-
-func (c *Config) IsFileAccessBlock() bool {
-	if c.RestrictedFileAccess.Mode == "block" {
-		return true
-	} else {
-		return false
-	}
-}
-
-func (c *Config) IsFileAccessOnlyContainer() bool {
-	if c.RestrictedFileAccess.Target == "container" {
-		return true
-	} else {
+func (c *Config) IsOnlyContainer(target string) bool {
+	switch target {
+	case "network":
+		if c.Network.Target == "container" {
+			return true
+		} else {
+			return false
+		}
+	case "fileaccess":
+		if c.RestrictedFileAccess.Target == "container" {
+			return true
+		} else {
+			return false
+		}
+	default:
 		return false
 	}
 }

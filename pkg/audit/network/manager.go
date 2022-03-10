@@ -172,7 +172,7 @@ func (m *Manager) attach() error {
 }
 
 func (m *Manager) setMode(table *libbpfgo.BPFMap, key []byte) []byte {
-	if m.config.IsRestricted() {
+	if m.config.IsRestrictedMode("network") {
 		binary.LittleEndian.PutUint32(key[MAP_MODE_START:MAP_MODE_END], MODE_BLOCK)
 	} else {
 		binary.LittleEndian.PutUint32(key[MAP_MODE_START:MAP_MODE_END], MODE_MONITOR)
@@ -182,7 +182,7 @@ func (m *Manager) setMode(table *libbpfgo.BPFMap, key []byte) []byte {
 }
 
 func (m *Manager) setTarget(table *libbpfgo.BPFMap, key []byte) []byte {
-	if m.config.IsOnlyContainer() {
+	if m.config.IsOnlyContainer("network") {
 		binary.LittleEndian.PutUint32(key[MAP_TARGET_START:MAP_TARGET_END], TAREGT_CONTAINER)
 	} else {
 		binary.LittleEndian.PutUint32(key[MAP_TARGET_START:MAP_TARGET_END], TARGET_HOST)
