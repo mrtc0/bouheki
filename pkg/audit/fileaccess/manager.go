@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	FILEACCESS_CONFIG = "fileopen_bouheki_config"
+	FILEACCESS_CONFIG = "fileopen_bouheki_config_map"
 	MODE_MONITOR      = uint32(0)
 	MODE_BLOCK        = uint32(1)
 

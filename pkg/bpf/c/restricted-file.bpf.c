@@ -30,7 +30,7 @@ struct file_open_audit_event {
     unsigned char path[NAME_MAX];
 };
 
-struct file_open_bouheki_config {
+struct fileopen_bouheki_config {
     u32 mode;
     u32 target;
 };
@@ -41,7 +41,7 @@ struct {
 	__uint(value_size, sizeof(u32));
 } fileopen_events SEC(".maps");
 
-BPF_HASH(fileopen_bouheki_config, u32, struct file_open_bouheki_config, 256);
+BPF_HASH(fileopen_bouheki_config_map, u32, struct fileopen_bouheki_config, 256);
 BPF_HASH(allowed_access_files, u32, struct file_path, 256);
 BPF_HASH(denied_access_files, u32, struct file_path, 256);
 
@@ -68,7 +68,7 @@ int BPF_PROG(restricted_file_open, struct file *file)
     const __u8 *filename;
     struct file_open_audit_event event = {};
     int index = 0;
-    struct file_open_bouheki_config *config = (struct file_open_bouheki_config *)bpf_map_lookup_elem(&fileopen_bouheki_config, &index);
+    struct fileopen_bouheki_config *config = (struct fileopen_bouheki_config *)bpf_map_lookup_elem(&fileopen_bouheki_config_map, &index);
     int ret = -1;
     unsigned int inum;
 
