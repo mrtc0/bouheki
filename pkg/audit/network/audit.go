@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"time"
 
+	"github.com/mrtc0/bouheki/pkg/audit/helpers"
 	"github.com/mrtc0/bouheki/pkg/bpf"
 	"github.com/mrtc0/bouheki/pkg/config"
 	log "github.com/mrtc0/bouheki/pkg/log"
@@ -180,10 +181,10 @@ func newAuditLog(header eventHeader, body detectEvent) log.RestrictedNetworkLog 
 
 	auditEvent := log.AuditEventLog{
 		Action:     body.ActionResult(),
-		Hostname:   nodename2string(header.Nodename),
+		Hostname:   helpers.NodenameToString(header.Nodename),
 		PID:        header.PID,
-		Comm:       comm2string(header.Command),
-		ParentComm: comm2string(header.ParentCommand),
+		Comm:       helpers.CommToString(header.Command),
+		ParentComm: helpers.CommToString(header.ParentCommand),
 	}
 
 	networkLog := log.RestrictedNetworkLog{

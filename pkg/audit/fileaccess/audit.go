@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/mrtc0/bouheki/pkg/audit/helpers"
 	"github.com/mrtc0/bouheki/pkg/config"
 )
 
@@ -87,16 +88,16 @@ func RunAudit(conf *config.Config) {
 
 func newAuditLog(event auditLog) log.RestrictedFileAccessLog {
 	auditEvent := log.AuditEventLog{
-		Action:     ret2action(event.Ret),
-		Hostname:   nodename2string(event.Nodename),
+		Action:     retToaction(event.Ret),
+		Hostname:   helpers.NodenameToString(event.Nodename),
 		PID:        event.PID,
-		Comm:       comm2string(event.Command),
-		ParentComm: comm2string(event.ParentCommand),
+		Comm:       helpers.CommToString(event.Command),
+		ParentComm: helpers.CommToString(event.ParentCommand),
 	}
 
 	fileAccessLog := log.RestrictedFileAccessLog{
 		AuditEventLog: auditEvent,
-		Path:          path2string(event.Path),
+		Path:          pathTostring(event.Path),
 	}
 
 	return fileAccessLog
@@ -113,7 +114,7 @@ func parseEvent(eventBytes []byte) (auditLog, error) {
 	return event, nil
 }
 
-func ret2action(ret int32) string {
+func retToaction(ret int32) string {
 	if ret == 0 {
 		return "ALLOWED"
 	} else {
@@ -121,33 +122,13 @@ func ret2action(ret int32) string {
 	}
 }
 
-func comm2string(commBytes [16]byte) string {
-	var s string
-	for _, b := range commBytes {
-		if b != 0x00 {
-			s += string(b)
-		}
-	}
-	return s
-}
-
-func path2string(path [PATH_MAX]byte) string {
+func pathTostring(path [PATH_MAX]byte) string {
 	var s string
 	for _, b := range path {
 		if b != 0x00 {
 			s += string(b)
 		} else {
 			break
-		}
-	}
-	return s
-}
-
-func nodename2string(bytes [65]byte) string {
-	var s string
-	for _, b := range bytes {
-		if b != 0x00 {
-			s += string(b)
 		}
 	}
 	return s
