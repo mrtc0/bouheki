@@ -1,4 +1,5 @@
-#include "common.h"
+#include "common_structs.h"
+#include "restricted_network_structs.h"
 #include "vmlinux.h"
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_helpers.h>
