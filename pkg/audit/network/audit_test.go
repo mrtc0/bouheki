@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mrtc0/bouheki/pkg/audit/helpers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -437,8 +438,8 @@ func TestAuditContainerBlock(t *testing.T) {
 
 	assert.Equal(t, ACTION_BLOCKED_STRING, body.ActionResult())
 	assert.Equal(t, byte2IPv4(body.DstIP), be_blocked_addr)
-	assert.Equal(t, len(nodename2string(header.Nodename)), 12)
-	assert.NotEqual(t, nodename2string(header.Nodename), hostname)
+	assert.Equal(t, len(helpers.NodenameToString(header.Nodename)), 12)
+	assert.NotEqual(t, helpers.NodenameToString(header.Nodename), hostname)
 
 	auditManager.manager.mod.Close()
 }

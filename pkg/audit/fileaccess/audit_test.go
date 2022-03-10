@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mrtc0/bouheki/pkg/audit/helpers"
 	"github.com/mrtc0/bouheki/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -32,10 +33,10 @@ func TestAudit_DenyAccess(t *testing.T) {
 			event, err := parseEvent(eventBytes)
 			assert.Nil(t, err)
 
-			if be_blocked_path == path2string(event.Path) {
+			if be_blocked_path == pathToString(event.Path) {
 				assert.Equal(t, int32(-1), event.Ret)
 				assert.Equal(t, auditManager.cmd.Process.Pid, int(event.PID))
-				assert.Equal(t, be_blocked_path, path2string(event.Path))
+				assert.Equal(t, be_blocked_path, pathToString(event.Path))
 				done <- true
 				break
 			}
@@ -54,6 +55,8 @@ func TestAudit_DenyAccess(t *testing.T) {
 }
 
 func TestAudit_Container(t *testing.T) {
+	out, _ := exec.Command("bpftool", "map", "list").Output()
+	fmt.Println(string(out))
 	be_blocked_path := "/etc/hosts"
 	timeout := time.After(10 * time.Second)
 	done := make(chan bool)
@@ -81,10 +84,10 @@ func TestAudit_Container(t *testing.T) {
 			event, err := parseEvent(eventBytes)
 			assert.Nil(t, err)
 
-			if be_blocked_path == path2string(event.Path) {
+			if be_blocked_path == pathToString(event.Path) {
 				assert.Equal(t, int32(-1), event.Ret)
-				assert.NotEqual(t, nodename2string(event.Nodename), hostname)
-				assert.Equal(t, be_blocked_path, path2string(event.Path))
+				assert.NotEqual(t, helpers.NodenameToString(event.Nodename), hostname)
+				assert.Equal(t, be_blocked_path, pathToString(event.Path))
 				done <- true
 				break
 			}

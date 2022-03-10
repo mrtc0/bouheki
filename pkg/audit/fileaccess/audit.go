@@ -97,7 +97,7 @@ func newAuditLog(event auditLog) log.RestrictedFileAccessLog {
 
 	fileAccessLog := log.RestrictedFileAccessLog{
 		AuditEventLog: auditEvent,
-		Path:          pathTostring(event.Path),
+		Path:          pathToString(event.Path),
 	}
 
 	return fileAccessLog
@@ -122,7 +122,7 @@ func retToaction(ret int32) string {
 	}
 }
 
-func pathTostring(path [PATH_MAX]byte) string {
+func pathToString(path [PATH_MAX]byte) string {
 	var s string
 	for _, b := range path {
 		if b != 0x00 {
