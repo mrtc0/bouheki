@@ -148,6 +148,10 @@ func (m *Manager) Start(eventsChannel chan []byte) error {
 	return nil
 }
 
+func (m *Manager) Stop() {
+	m.rb.Stop()
+}
+
 func (m *Manager) Close() {
 	m.rb.Close()
 }

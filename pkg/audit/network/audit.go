@@ -3,6 +3,8 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"os"
+	"os/signal"
 	"time"
 
 	"github.com/mrtc0/bouheki/pkg/audit/helpers"
@@ -124,10 +126,14 @@ func UpdateDomainList(mgr Manager) {
 }
 
 func RunAudit(conf *config.Config) {
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Interrupt)
+
 	mod, err := setupBPFProgram()
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer mod.Close()
 
 	cache := make(map[string][]DomainCache)
 
@@ -148,16 +154,21 @@ func RunAudit(conf *config.Config) {
 
 	go UpdateDomainList(mgr)
 
-	for {
-		eventBytes := <-eventsChannel
-		header, body, err := parseEvent(eventBytes)
-		if err != nil {
-			log.Error(err)
-		}
+	go func() {
+		for {
+			eventBytes := <-eventsChannel
+			header, body, err := parseEvent(eventBytes)
+			if err != nil {
+				log.Error(err)
+			}
 
-		auditLog := newAuditLog(header, body)
-		auditLog.Info()
-	}
+			auditLog := newAuditLog(header, body)
+			auditLog.Info()
+		}
+	}()
+
+	<-quit
+	mgr.Stop()
 }
 
 func newAuditLog(header eventHeader, body detectEvent) log.RestrictedNetworkLog {

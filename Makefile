@@ -42,15 +42,16 @@ vmlinux:
 
 .PHONY: build
 build: bpf-restricted-network bpf-restricted-file
-	$(CGOFLAG) go build -ldflags '-w -s' -o bouheki cmd/bouheki/bouheki.go
+	mkdir -p build
+	$(CGOFLAG) go build -ldflags '-w -s' -o build/bouheki cmd/bouheki/bouheki.go
 
-.PHONY: test
-test: bpf-restricted-network bpf-restricted-file
+.PHONY: test/unit
+test/unit: bpf-restricted-network bpf-restricted-file
 	which gotestsum || go install gotest.tools/gotestsum@latest
 	$(CGOFLAG) sudo -E gotestsum -- --mod=vendor -bench=^$$ -race ./...
 
-.PHONY: test/integration
-test/integration: bpf-restricted-network bpf-restricted-file
+.PHONY: test
+test: bpf-restricted-network bpf-restricted-file
 	which gotestsum || go install gotest.tools/gotestsum@latest
 	$(CGOFLAG) sudo -E gotestsum -- --tags=integration --mod=vendor -bench=^$$ -race ./...
 
@@ -59,6 +60,6 @@ test/integration/specify: bpf-restricted-network bpf-restricted-file
 	which gotestsum || go install gotest.tools/gotestsum@latest
 	$(CGOFLAG) sudo -E go test -tags integration -run ${NAME} ./...
 
-.PHONY: release
-release:
-	goreleaser release --rm-dist
+.PHONY: release/local
+release/local: build
+	CGO_CFLAGS="-I$(abspath $(OUTPUT))" CGO_LDFLAGS="-Wl,-Bstatic -Wl,-Bdynamic,-lelf,-lz $(LIBBPF_OBJ)" goreleaser release --snapshot --rm-dist

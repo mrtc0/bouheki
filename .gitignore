@@ -1,5 +1,6 @@
 vendor/
 dist/
 .vagrant
-pkg/bpf/bytecode/restricted-network.bpf.o
 output/
+pkg/bpf/bytecode/
+build/
