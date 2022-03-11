@@ -25,6 +25,8 @@ func TestAudit_DenyAccess(t *testing.T) {
 	conf.RestrictedFileAccess.Deny = []string{be_blocked_path}
 	eventsChannel := make(chan []byte)
 	auditManager := runAuditWithOnce(conf, []string{"cat", be_blocked_path}, eventsChannel)
+	defer auditManager.manager.Stop()
+	defer auditManager.manager.mod.Close()
 
 	go func() {
 		for {
@@ -57,7 +59,7 @@ func TestAudit_DenyAccess(t *testing.T) {
 func TestAudit_Container(t *testing.T) {
 	out, _ := exec.Command("bpftool", "map", "list").Output()
 	fmt.Println(string(out))
-	be_blocked_path := "/etc/hosts"
+	be_blocked_path := "/root/.bashrc"
 	timeout := time.After(10 * time.Second)
 	done := make(chan bool)
 	conf := config.DefaultConfig()
@@ -75,7 +77,9 @@ func TestAudit_Container(t *testing.T) {
 		fmt.Sprintf("/usr/bin/docker run --rm ubuntu:latest cat %s", be_blocked_path),
 	}
 	eventsChannel := make(chan []byte)
-	runAuditWithOnce(conf, commands, eventsChannel)
+	auditManager := runAuditWithOnce(conf, commands, eventsChannel)
+	defer auditManager.manager.Stop()
+	defer auditManager.manager.mod.Close()
 
 	go func() {
 		for {
@@ -110,7 +114,8 @@ type TestAuditManager struct {
 func runAuditWithOnce(conf *config.Config, execCmd []string, eventsChannel chan []byte) TestAuditManager {
 	mgr := createManager(conf)
 	mgr.Attach()
-	mgr.Start(eventsChannel)
+	lostChannel := make(chan uint64)
+	mgr.Start(eventsChannel, lostChannel)
 
 	cmd := exec.Command(execCmd[0], execCmd[1:]...)
 	err := cmd.Start()

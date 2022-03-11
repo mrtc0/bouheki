@@ -46,11 +46,12 @@ func NewApp(version string) *cli.App {
 		log.SetOutput(conf.Log.Output)
 		log.SetRotation(conf.Log.Output, conf.Log.MaxSize, conf.Log.MaxAge)
 
-		go network.RunAudit(conf)
-		go fileaccess.RunAudit(conf)
-
 		quit := make(chan os.Signal)
 		signal.Notify(quit, os.Interrupt)
+
+		go fileaccess.RunAudit(conf)
+		go network.RunAudit(conf)
+
 		<-quit
 		return nil
 	}

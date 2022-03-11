@@ -3,26 +3,17 @@ package fileaccess
 import (
 	"bytes"
 	"testing"
+	"unsafe"
 
 	"github.com/mrtc0/bouheki/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Start(t *testing.T) {
-	t.Run("expect to be initialize perf buffer", func(t *testing.T) {
-		config := config.DefaultConfig()
-		mgr := createManager(config)
-
-		eventChannel := make(chan []byte)
-		actual := mgr.Start(eventChannel)
-		assert.Equal(t, nil, actual)
-	})
-}
-
 func Test_Attach(t *testing.T) {
 	t.Run("expect to be attach BPF Program", func(t *testing.T) {
 		config := config.DefaultConfig()
 		mgr := createManager(config)
+		defer mgr.mod.Close()
 
 		actual := mgr.Attach()
 		assert.Equal(t, nil, actual)
@@ -50,16 +41,15 @@ func Test_SetConfigMap_AllowedFiles(t *testing.T) {
 			config.RestrictedFileAccess.Allow = test.allowedFiles
 			config.RestrictedFileAccess.Deny = test.deniedFiles
 			mgr := createManager(config)
-
-			err := mgr.SetConfigToMap()
-			assert.Equal(t, nil, err)
+			defer mgr.mod.Close()
 
 			map_allowed_files, err := mgr.mod.GetMap(ALLOWED_FILES_MAP_NAME)
 			if err != nil {
 				t.Fatalf("Failed open eBPF map for %s, err: %s", ALLOWED_FILES_MAP_NAME, err)
 			}
 
-			actual, err := map_allowed_files.GetValue(uint8(0), PATH_MAX)
+			key := uint8(0)
+			actual, err := map_allowed_files.GetValue(unsafe.Pointer(&key))
 			if err != nil {
 				t.Fatalf("Faild to get value from eBPF map %s, err: %s", ALLOWED_FILES_MAP_NAME, err)
 			}
@@ -92,24 +82,27 @@ func Test_SetConfigMap_DeniedFiles(t *testing.T) {
 			config.RestrictedFileAccess.Allow = test.allowedFiles
 			config.RestrictedFileAccess.Deny = test.deniedFiles
 			mgr := createManager(config)
-
-			err := mgr.SetConfigToMap()
-			assert.Equal(t, nil, err)
+			defer mgr.mod.Close()
 
 			map_denied_files, err := mgr.mod.GetMap(DENIED_FILES_MAP_NAME)
 			if err != nil {
 				t.Fatalf("Failed open eBPF map for %s, err: %s", DENIED_FILES_MAP_NAME, err)
 			}
 
-			actual, err := map_denied_files.GetValue(uint8(0), PATH_MAX)
-			if err != nil {
-				t.Fatalf("Faild to get value from eBPF map %s, err: %s", DENIED_FILES_MAP_NAME, err)
+			iter := map_denied_files.Iterator()
+			if iter.Next() {
+				key := iter.Key()
+				keyPtr := unsafe.Pointer(&key[0])
+				actual, err := map_denied_files.GetValue(keyPtr)
+
+				if err != nil {
+					t.Fatalf("Faild to get value from eBPF map %s, err: %s", DENIED_FILES_MAP_NAME, err)
+				}
+
+				padding := bytes.Repeat([]byte{0x00}, PATH_MAX-len(test.expected))
+				expected := append(test.expected, padding...)
+				assert.Equal(t, expected, actual)
 			}
-
-			padding := bytes.Repeat([]byte{0x00}, PATH_MAX-len(test.expected))
-			expected := append(test.expected, padding...)
-
-			assert.Equal(t, expected, actual)
 		})
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"unsafe"
 
 	"github.com/aquasecurity/libbpfgo"
 	"github.com/mrtc0/bouheki/pkg/config"
@@ -206,7 +207,8 @@ func (m *Manager) setConfigMap() error {
 	binary.LittleEndian.PutUint32(key[MAP_ALLOW_UID_INDEX:MAP_ALLOW_UID_INDEX+4], uint32(len(m.config.Network.UID.Allow)))
 	binary.LittleEndian.PutUint32(key[MAP_ALLOW_GID_INDEX:MAP_ALLOW_GID_INDEX+4], uint32(len(m.config.Network.GID.Allow)))
 
-	err = configMap.Update(uint8(0), key)
+	k := uint8(0)
+	err = configMap.Update(unsafe.Pointer(&k), unsafe.Pointer(&key[0]))
 
 	if err != nil {
 		return err
@@ -222,7 +224,9 @@ func (m *Manager) setAllowedCommandList() error {
 	}
 
 	for _, c := range m.config.Network.Command.Allow {
-		err = commands.Update(byteToKey([]byte(c)), uint8(0))
+		key := byteToKey([]byte(c))
+		value := uint8(0)
+		err = commands.Update(unsafe.Pointer(&key[0]), unsafe.Pointer(&value))
 		if err != nil {
 			return err
 		}
@@ -238,7 +242,9 @@ func (m *Manager) setDeniedCommandList() error {
 	}
 
 	for _, c := range m.config.Network.Command.Deny {
-		err = commands.Update(byteToKey([]byte(c)), uint8(0))
+		key := byteToKey([]byte(c))
+		value := uint8(0)
+		err = commands.Update(unsafe.Pointer(&key[0]), unsafe.Pointer(&value))
 		if err != nil {
 			return err
 		}
@@ -253,7 +259,9 @@ func (m *Manager) setAllowedUIDList() error {
 		return err
 	}
 	for _, uid := range m.config.Network.UID.Allow {
-		err = uids.Update(uintToKey(uid), uint8(0))
+		key := uintToKey(uid)
+		value := uint8(0)
+		err = uids.Update(unsafe.Pointer(&key[0]), unsafe.Pointer(&value))
 		if err != nil {
 			return err
 		}
@@ -268,7 +276,9 @@ func (m *Manager) setDeniedUIDList() error {
 		return err
 	}
 	for _, uid := range m.config.Network.UID.Deny {
-		err = uids.Update(uintToKey(uid), uint8(0))
+		key := uintToKey(uid)
+		value := uint8(0)
+		err = uids.Update(unsafe.Pointer(&key[0]), unsafe.Pointer(&value))
 		if err != nil {
 			return err
 		}
@@ -283,7 +293,9 @@ func (m *Manager) setAllowedGIDList() error {
 		return err
 	}
 	for _, gid := range m.config.Network.GID.Allow {
-		err = gids.Update(uintToKey(gid), uint8(0))
+		key := uintToKey(gid)
+		value := uint8(0)
+		err = gids.Update(unsafe.Pointer(&key[0]), unsafe.Pointer(&value))
 		if err != nil {
 			return err
 		}
@@ -298,7 +310,9 @@ func (m *Manager) setDeniedGIDList() error {
 		return err
 	}
 	for _, gid := range m.config.Network.GID.Deny {
-		err = gids.Update(uintToKey(gid), uint8(0))
+		key := uintToKey(gid)
+		value := uint8(0)
+		err = gids.Update(unsafe.Pointer(&key[0]), unsafe.Pointer(&value))
 		if err != nil {
 			return err
 		}
@@ -435,7 +449,7 @@ func (m *Manager) cidrListDeleteKey(mapName string, key []byte) error {
 		return err
 	}
 
-	if err := cidr_list.DeleteKey(key); err != nil {
+	if err := cidr_list.DeleteKey(unsafe.Pointer(&key[0])); err != nil {
 		return err
 	}
 	return nil
@@ -446,7 +460,9 @@ func (m *Manager) cidrListUpdate(addr IPAddress, mapName string) error {
 	if err != nil {
 		return err
 	}
-	err = cidr_list.Update(addr.key, uint8(0))
+	value := uint8(0)
+	// NOTE: Slices and arrays are supported but references should be passed to the first element in the slice or array.
+	err = cidr_list.Update(unsafe.Pointer(&addr.key[0]), unsafe.Pointer(&value))
 	if err != nil {
 		return err
 	}

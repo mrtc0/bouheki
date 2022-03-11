@@ -3,6 +3,7 @@ package fileaccess
 import (
 	"encoding/binary"
 	"fmt"
+	"unsafe"
 
 	"github.com/aquasecurity/libbpfgo"
 	"github.com/mrtc0/bouheki/pkg/config"
@@ -24,8 +25,8 @@ type Manager struct {
 	pb     *libbpfgo.PerfBuffer
 }
 
-func (m *Manager) Start(eventChannel chan []byte) error {
-	pb, err := m.mod.InitPerfBuf("fileopen_events", eventChannel, nil, 1024)
+func (m *Manager) Start(eventChannel chan []byte, lostChannel chan uint64) error {
+	pb, err := m.mod.InitPerfBuf("fileopen_events", eventChannel, lostChannel, 1024)
 	if err != nil {
 		return err
 	}
@@ -34,6 +35,10 @@ func (m *Manager) Start(eventChannel chan []byte) error {
 	m.pb = pb
 
 	return nil
+}
+
+func (m *Manager) Stop() {
+	m.pb.Stop()
 }
 
 func (m *Manager) Close() {
@@ -61,11 +66,21 @@ func (m *Manager) SetConfigToMap() error {
 		return err
 	}
 
-	map_allowed_files, err := m.mod.GetMap(ALLOWED_FILES_MAP_NAME)
+	err = m.setAllowedFileAccessMap()
 	if err != nil {
 		return err
 	}
-	map_denied_files, err := m.mod.GetMap(DENIED_FILES_MAP_NAME)
+
+	err = m.setDeniedFileAccessMap()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Manager) setAllowedFileAccessMap() error {
+	map_allowed_files, err := m.mod.GetMap(ALLOWED_FILES_MAP_NAME)
 	if err != nil {
 		return err
 	}
@@ -73,16 +88,31 @@ func (m *Manager) SetConfigToMap() error {
 	allowed_paths := m.config.RestrictedFileAccess.Allow
 
 	for i, path := range allowed_paths {
-		err = map_allowed_files.Update(uint8(i), []byte(path))
+		key := uint8(i)
+		value := []byte(path)
+		err = map_allowed_files.Update(unsafe.Pointer(&key), unsafe.Pointer(&value[0]))
 		if err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (m *Manager) setDeniedFileAccessMap() error {
+	map_denied_files, err := m.mod.GetMap(DENIED_FILES_MAP_NAME)
+	if err != nil {
+		return err
+	}
 	denied_paths := m.config.RestrictedFileAccess.Deny
 
 	for i, path := range denied_paths {
-		err = map_denied_files.Update(uint8(i), []byte(path))
+		key := uint8(i)
+		value := []byte(path)
+
+		keyPtr := unsafe.Pointer(&key)
+		valuePtr := unsafe.Pointer(&value[0])
+		err = map_denied_files.Update(keyPtr, valuePtr)
 		if err != nil {
 			return err
 		}
@@ -110,7 +140,8 @@ func (m *Manager) setModeAndTarget() error {
 		binary.LittleEndian.PutUint32(key[4:8], TARGET_HOST)
 	}
 
-	err = configMap.Update(uint8(0), key)
+	k := uint8(0)
+	err = configMap.Update(unsafe.Pointer(&k), unsafe.Pointer(&key[0]))
 	if err != nil {
 		return err
 	}
