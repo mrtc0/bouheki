@@ -10,6 +10,8 @@ import (
 import (
 	"bytes"
 	"encoding/binary"
+	"os"
+	"os/signal"
 
 	"github.com/mrtc0/bouheki/pkg/audit/helpers"
 	"github.com/mrtc0/bouheki/pkg/config"
@@ -54,10 +56,14 @@ func setupBPFProgram() (*libbpfgo.Module, error) {
 }
 
 func RunAudit(conf *config.Config) {
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Interrupt)
+
 	mod, err := setupBPFProgram()
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer mod.Close()
 
 	mgr := Manager{
 		mod:    mod,
@@ -72,18 +78,24 @@ func RunAudit(conf *config.Config) {
 	mgr.Attach()
 
 	eventChannel := make(chan []byte)
-	mgr.Start(eventChannel)
+	lostChannel := make(chan uint64)
+	mgr.Start(eventChannel, lostChannel)
 
-	for {
-		eventBytes := <-eventChannel
-		event, err := parseEvent(eventBytes)
-		if err != nil {
-			log.Error(err)
+	go func() {
+		for {
+			eventBytes := <-eventChannel
+			event, err := parseEvent(eventBytes)
+			if err != nil {
+				log.Error(err)
+			}
+
+			auditLog := newAuditLog(event)
+			auditLog.Info()
 		}
+	}()
 
-		auditLog := newAuditLog(event)
-		auditLog.Info()
-	}
+	<-quit
+	mgr.Stop()
 }
 
 func newAuditLog(event auditLog) log.RestrictedFileAccessLog {

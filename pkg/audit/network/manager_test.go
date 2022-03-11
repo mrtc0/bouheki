@@ -3,6 +3,7 @@ package network
 import (
 	"net"
 	"testing"
+	"unsafe"
 
 	"github.com/mrtc0/bouheki/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -122,11 +123,11 @@ func Test_updateDNSCache_needUpdate(t *testing.T) {
 			}
 
 			// After name resolution, the ipAddr2 address was not included, so it should have been removed.
-			_, err = bpfmap.GetValue(ipAddr2.key, 1)
+			_, err = bpfmap.GetValue(unsafe.Pointer(&ipAddr2.key[0]))
 			assert.NotEqual(t, nil, err)
 
 			// The ipAddr1 has not changed, so the map is still available.
-			_, err = bpfmap.GetValue(ipAddr1.key, 1)
+			_, err = bpfmap.GetValue(unsafe.Pointer(&ipAddr1.key[0]))
 			assert.Equal(t, nil, err)
 		})
 	}
