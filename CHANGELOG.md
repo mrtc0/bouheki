@@ -28,6 +28,22 @@ log:
   format: json
 ```
 
+### Changed
+
+#### update libbpfgo and static link [#9](https://github.com/mrtc0/bouheki/pull/9)
+
+libbpfgo updated to `v0.2.4-libbpf-0.6.1`. With this change, libbpf is managed a a submodule.  
+Also, libbpf is now statically linked.
+
+```bash
+$ ldd bouheki
+        linux-vdso.so.1 (0x00007fff9a8ae000)
+        libelf.so.1 => /lib/x86_64-linux-gnu/libelf.so.1 (0x00007fc5e2761000)
+        libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007fc5e2745000)
+        libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fc5e251d000)
+        /lib64/ld-linux-x86-64.so.2 (0x00007fc5e2788000)
+```
+
 #### Support for restrictions by domain name [#5](https://github.com/mrtc0/bouheki/pull/5)
 
 Restrictions by domain name are now possible.  
