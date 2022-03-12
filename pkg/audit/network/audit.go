@@ -144,8 +144,11 @@ func RunAudit(conf *config.Config) {
 		dnsResolver: &DefaultResolver{},
 	}
 
-	err = mgr.SetConfigToMap()
-	if err != nil {
+	if err = mgr.SetConfigToMap(); err != nil {
+		log.Fatal(err)
+	}
+
+	if err = mgr.Attach(); err != nil {
 		log.Fatal(err)
 	}
 

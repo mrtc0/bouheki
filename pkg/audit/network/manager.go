@@ -20,17 +20,17 @@ const (
 	TAREGT_CONTAINER uint32 = 1
 
 	// BPF Map Names
-	BOUHEKI_CONFIG_MAP_NAME       = "network_bouheki_config_map"
-	ALLOWED_V4_CIDR_LIST_MAP_NAME = "allowed_v4_cidr_list"
-	ALLOWED_V6_CIDR_LIST_MAP_NAME = "allowed_v6_cidr_list"
-	DENIED_V4_CIDR_LIST_MAP_NAME  = "denied_v4_cidr_list"
-	DENIED_V6_CIDR_LIST_MAP_NAME  = "denied_v6_cidr_list"
-	ALLOWED_UID_LIST_MAP_NAME     = "allowed_uid_list"
-	DENIED_UID_LIST_MAP_NAME      = "denied_uid_list"
-	ALLOWED_GID_LIST_MAP_NAME     = "allowed_gid_list"
-	DENIED_GID_LIST_MAP_NAME      = "denied_gid_list"
-	ALLOWED_COMMAND_LIST_MAP_NAME = "allowed_command_list"
-	DENIED_COMMAND_LIST_MAP_NAME  = "denied_command_list"
+	RESTRICT_NETWORK_CONFIG_MAP_NAME = "network_bouheki_config_map"
+	ALLOWED_V4_CIDR_LIST_MAP_NAME    = "allowed_v4_cidr_list"
+	ALLOWED_V6_CIDR_LIST_MAP_NAME    = "allowed_v6_cidr_list"
+	DENIED_V4_CIDR_LIST_MAP_NAME     = "denied_v4_cidr_list"
+	DENIED_V6_CIDR_LIST_MAP_NAME     = "denied_v6_cidr_list"
+	ALLOWED_UID_LIST_MAP_NAME        = "allowed_uid_list"
+	DENIED_UID_LIST_MAP_NAME         = "denied_uid_list"
+	ALLOWED_GID_LIST_MAP_NAME        = "allowed_gid_list"
+	DENIED_GID_LIST_MAP_NAME         = "denied_gid_list"
+	ALLOWED_COMMAND_LIST_MAP_NAME    = "allowed_command_list"
+	DENIED_COMMAND_LIST_MAP_NAME     = "denied_command_list"
 
 	/*
 	   +---------------+---------------+-------------------+-------------------+-------------------+
@@ -129,9 +129,6 @@ func (m *Manager) SetConfigToMap() error {
 	if err := m.setDeniedGIDList(); err != nil {
 		return err
 	}
-	if err := m.attach(); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -156,7 +153,7 @@ func (m *Manager) Close() {
 	m.rb.Close()
 }
 
-func (m *Manager) attach() error {
+func (m *Manager) Attach() error {
 	programs := []string{"socket_connect"}
 	for _, progName := range programs {
 		prog, err := m.mod.GetProgram(progName)
@@ -197,7 +194,7 @@ func (m *Manager) setTarget(table *libbpfgo.BPFMap, key []byte) []byte {
 }
 
 func (m *Manager) setConfigMap() error {
-	configMap, err := m.mod.GetMap(BOUHEKI_CONFIG_MAP_NAME)
+	configMap, err := m.mod.GetMap(RESTRICT_NETWORK_CONFIG_MAP_NAME)
 	if err != nil {
 		return err
 	}

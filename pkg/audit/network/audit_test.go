@@ -381,6 +381,7 @@ func TestCanCommunicateWithRestrictedCommand(t *testing.T) {
 	be_blocked_addr := "10.254.249.3"
 	mgr := createManager(config, &DefaultResolver{})
 
+	mgr.Attach()
 	eventsChannel := make(chan []byte)
 	mgr.Start(eventsChannel)
 
@@ -396,6 +397,7 @@ func TestRestrictedCommand(t *testing.T) {
 	be_blocked_addr := "10.254.249.3"
 	mgr := createManager(config, &DefaultResolver{})
 
+	mgr.Attach()
 	eventsChannel := make(chan []byte)
 	mgr.Start(eventsChannel)
 
@@ -454,6 +456,7 @@ func TestAuditContainerDoNotCaptureHostEvents(t *testing.T) {
 	mgr := createManager(config, &DefaultResolver{})
 	eventsChannel := make(chan []byte)
 
+	mgr.Attach()
 	mgr.Start(eventsChannel)
 
 	cmd := exec.Command("curl", fmt.Sprintf("http://%s", be_blocked_addr))
@@ -486,6 +489,7 @@ func TestAuditContainerDoNotCaptureHostEvents(t *testing.T) {
 func runAuditWithOnce(configPath string, execCmd []string, eventsChannel chan []byte) TestAuditManager {
 	config := loadFixtureConfig(configPath)
 	mgr := createManager(config, &SpyIntegrationDNSResolver{})
+	mgr.Attach()
 
 	mgr.Start(eventsChannel)
 
