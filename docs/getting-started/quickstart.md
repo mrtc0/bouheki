@@ -42,3 +42,14 @@ For more information for configurations, see [here](../configuration/network-res
 ```shell
 $ sudo bouheki --config example.yml
 ```
+
+### Docker
+
+```shell
+$ docker run --rm -it --cgroupns=host --pid=host --privileged \
+    -v /sys/kernel/:/sys/kernel/ \
+    -v /sys/fs/bpf:/sys/fs/bpf \
+    -v /path/to/config.yaml:/config.yaml \
+    --env BOUHEKI_SKIP_COMPATIBLE_CHECK=1 \
+    ghcr.io/mrtc0/bouheki:latest --config /config.yaml
+```
