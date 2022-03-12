@@ -7,12 +7,14 @@ network:
   cidr:
     allow:
       - 0.0.0.0/0
-      - ::/0
       # - 10.0.1.1/24
       # - 127.0.0.1/24
     # Override "allow" list with exceptions. Default: []
-    deny: # []
-      - 10.0.1.71/32
+    deny: []
+  domain:
+    allow: []
+    deny:
+      - example.com
   # Restrictions by command name (optional).
   command:
     # Default: empty. All command will be allowed.
@@ -24,16 +26,21 @@ network:
     #  - nc
   # Restrictions by UID (optional).
   uid:
-    allow:
-      - 0 # Default []
-    deny:
-      - 1000 # Default []
+    allow: []
+    deny: []
   # Restrictions by GID (optional).
   gid:
     allow: []
       # - 0
     deny: []
       # 1000
+files:
+  mode: block
+  target: host
+  allow:
+    - /
+  deny:
+    - /etc/passwd
 log:
   # Log format(json or text). Default: json
   format: json
