@@ -4,3 +4,5 @@ dist/
 output/
 pkg/bpf/bytecode/
 build/
+.idea/
+.vscode/

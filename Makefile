@@ -45,6 +45,11 @@ build: bpf-restricted-network bpf-restricted-file
 	mkdir -p build
 	$(CGOFLAG) go build -ldflags '-w -s' -o build/bouheki cmd/bouheki/bouheki.go
 
+
+.PHONY: build/docker
+build/docker:
+	sudo docker build -t ghcr.io/mrtc0/bouheki:latest .
+
 .PHONY: test/unit
 test/unit: bpf-restricted-network bpf-restricted-file
 	which gotestsum || go install gotest.tools/gotestsum@latest
@@ -61,5 +66,10 @@ test/integration/specify: bpf-restricted-network bpf-restricted-file
 	$(CGOFLAG) sudo -E go test -tags integration -run ${NAME} ./...
 
 .PHONY: release/local
-release/local: build
+release/local: build build/docker
 	CGO_CFLAGS="-I$(abspath $(OUTPUT))" CGO_LDFLAGS="-Wl,-Bstatic -Wl,-Bdynamic,-lelf,-lz $(LIBBPF_OBJ)" goreleaser release --snapshot --rm-dist
+
+.PHONY: release
+release: build build/docker
+	CGO_CFLAGS="-I$(abspath $(OUTPUT))" CGO_LDFLAGS="-Wl,-Bstatic -Wl,-Bdynamic,-lelf,-lz $(LIBBPF_OBJ)" goreleaser release --rm-dist
+	sudo docker push ghcr.io/mrtc0/bouheki:latest
