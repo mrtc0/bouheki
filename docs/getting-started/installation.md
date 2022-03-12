@@ -31,7 +31,7 @@ GRUB_CMDLINE_LINUX="... lsm=lockdown,yama,apparmor,bpf"
 ...
 ```
 
-Finary, run `update-grub2` .
+Finary, run `update-grub2`.
 
 ```shell
 sudo update-grub2
