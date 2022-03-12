@@ -5,6 +5,43 @@ on:
   pull_request:
 
 jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Setup
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Setup build tools
+      run: |
+        apt-get update
+        apt-get install -y \
+          wget \
+          build-essential \
+          libbpf-dev \
+          libelf-dev \
+          clang \
+          gcc-multilib \
+          llvm \
+          zlib1g-dev \
+          libelf-dev \
+          linux-tools-generic \
+          linux-tools-common \
+          linux-headers-$(uname -r) \
+          linux-tools-$(uname -r)
+
+    - name: build
+      run: |
+        make build
+
   fmt:
     name: gofmt
     runs-on: ubuntu-latest
