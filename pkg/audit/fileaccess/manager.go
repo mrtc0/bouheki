@@ -85,7 +85,7 @@ func (m *Manager) setAllowedFileAccessMap() error {
 		return err
 	}
 
-	allowed_paths := m.config.RestrictedFileAccess.Allow
+	allowed_paths := m.config.RestrictedFileAccessConfig.Allow
 
 	for i, path := range allowed_paths {
 		key := uint8(i)
@@ -104,7 +104,7 @@ func (m *Manager) setDeniedFileAccessMap() error {
 	if err != nil {
 		return err
 	}
-	denied_paths := m.config.RestrictedFileAccess.Deny
+	denied_paths := m.config.RestrictedFileAccessConfig.Deny
 
 	for i, path := range denied_paths {
 		key := uint8(i)

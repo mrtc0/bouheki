@@ -6,7 +6,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type NetworkConfig struct {
+type RestrictedNetworkConfig struct {
 	Mode    string        `yaml:"mode"`
 	Target  string        `yaml:"target"`
 	Command CommandConfig `yaml:"command"`
@@ -16,7 +16,7 @@ type NetworkConfig struct {
 	GID     GIDConfig     `yaml:"gid"`
 }
 
-type RestrictedFileAccess struct {
+type RestrictedFileAccessConfig struct {
 	Mode   string   `yaml:"mode"`
 	Target string   `yaml:"target"`
 	Allow  []string `yaml:"allow"`
@@ -57,14 +57,14 @@ type LogConfig struct {
 }
 
 type Config struct {
-	Network              NetworkConfig
-	RestrictedFileAccess `yaml:"files"`
-	Log                  LogConfig
+	RestrictedNetworkConfig    `yaml:"network"`
+	RestrictedFileAccessConfig `yaml:"files"`
+	Log                        LogConfig
 }
 
 func DefaultConfig() *Config {
 	return &Config{
-		Network: NetworkConfig{
+		RestrictedNetworkConfig: RestrictedNetworkConfig{
 			Mode:    "monitor",
 			Target:  "host",
 			Command: CommandConfig{Allow: []string{}, Deny: []string{}},
@@ -73,7 +73,7 @@ func DefaultConfig() *Config {
 			UID:     UIDConfig{Allow: []uint{}, Deny: []uint{}},
 			GID:     GIDConfig{Allow: []uint{}, Deny: []uint{}},
 		},
-		RestrictedFileAccess: RestrictedFileAccess{
+		RestrictedFileAccessConfig: RestrictedFileAccessConfig{
 			Mode:   "monitor",
 			Target: "host",
 			Allow:  []string{"/"},
@@ -106,13 +106,13 @@ func NewConfig(configPath string) (*Config, error) {
 func (c *Config) IsRestrictedMode(target string) bool {
 	switch target {
 	case "network":
-		if c.Network.Mode == "block" {
+		if c.RestrictedNetworkConfig.Mode == "block" {
 			return true
 		} else {
 			return false
 		}
 	case "fileaccess":
-		if c.RestrictedFileAccess.Mode == "block" {
+		if c.RestrictedFileAccessConfig.Mode == "block" {
 			return true
 		} else {
 			return false
@@ -125,13 +125,13 @@ func (c *Config) IsRestrictedMode(target string) bool {
 func (c *Config) IsOnlyContainer(target string) bool {
 	switch target {
 	case "network":
-		if c.Network.Target == "container" {
+		if c.RestrictedNetworkConfig.Target == "container" {
 			return true
 		} else {
 			return false
 		}
 	case "fileaccess":
-		if c.RestrictedFileAccess.Target == "container" {
+		if c.RestrictedFileAccessConfig.Target == "container" {
 			return true
 		} else {
 			return false

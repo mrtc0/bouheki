@@ -115,7 +115,7 @@ func setupBPFProgram() (*libbpfgo.Module, error) {
 
 func UpdateDomainList(mgr Manager) {
 	for {
-		time.Sleep(time.Second * time.Duration(mgr.config.Network.Domain.Interval))
+		time.Sleep(time.Second * time.Duration(mgr.config.RestrictedNetworkConfig.Domain.Interval))
 		if err := mgr.setAllowedDomainList(); err != nil {
 			log.Fatal(err)
 		}

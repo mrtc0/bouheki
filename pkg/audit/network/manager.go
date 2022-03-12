@@ -204,9 +204,9 @@ func (m *Manager) setConfigMap() error {
 	key = m.setMode(configMap, key)
 	key = m.setTarget(configMap, key)
 
-	binary.LittleEndian.PutUint32(key[MAP_ALLOW_COMMAND_INDEX:MAP_ALLOW_COMMAND_INDEX+4], uint32(len(m.config.Network.Command.Allow)))
-	binary.LittleEndian.PutUint32(key[MAP_ALLOW_UID_INDEX:MAP_ALLOW_UID_INDEX+4], uint32(len(m.config.Network.UID.Allow)))
-	binary.LittleEndian.PutUint32(key[MAP_ALLOW_GID_INDEX:MAP_ALLOW_GID_INDEX+4], uint32(len(m.config.Network.GID.Allow)))
+	binary.LittleEndian.PutUint32(key[MAP_ALLOW_COMMAND_INDEX:MAP_ALLOW_COMMAND_INDEX+4], uint32(len(m.config.RestrictedNetworkConfig.Command.Allow)))
+	binary.LittleEndian.PutUint32(key[MAP_ALLOW_UID_INDEX:MAP_ALLOW_UID_INDEX+4], uint32(len(m.config.RestrictedNetworkConfig.UID.Allow)))
+	binary.LittleEndian.PutUint32(key[MAP_ALLOW_GID_INDEX:MAP_ALLOW_GID_INDEX+4], uint32(len(m.config.RestrictedNetworkConfig.GID.Allow)))
 
 	k := uint8(0)
 	err = configMap.Update(unsafe.Pointer(&k), unsafe.Pointer(&key[0]))
@@ -224,7 +224,7 @@ func (m *Manager) setAllowedCommandList() error {
 		return err
 	}
 
-	for _, c := range m.config.Network.Command.Allow {
+	for _, c := range m.config.RestrictedNetworkConfig.Command.Allow {
 		key := byteToKey([]byte(c))
 		value := uint8(0)
 		err = commands.Update(unsafe.Pointer(&key[0]), unsafe.Pointer(&value))
@@ -242,7 +242,7 @@ func (m *Manager) setDeniedCommandList() error {
 		return err
 	}
 
-	for _, c := range m.config.Network.Command.Deny {
+	for _, c := range m.config.RestrictedNetworkConfig.Command.Deny {
 		key := byteToKey([]byte(c))
 		value := uint8(0)
 		err = commands.Update(unsafe.Pointer(&key[0]), unsafe.Pointer(&value))
@@ -259,7 +259,7 @@ func (m *Manager) setAllowedUIDList() error {
 	if err != nil {
 		return err
 	}
-	for _, uid := range m.config.Network.UID.Allow {
+	for _, uid := range m.config.RestrictedNetworkConfig.UID.Allow {
 		key := uintToKey(uid)
 		value := uint8(0)
 		err = uids.Update(unsafe.Pointer(&key[0]), unsafe.Pointer(&value))
@@ -276,7 +276,7 @@ func (m *Manager) setDeniedUIDList() error {
 	if err != nil {
 		return err
 	}
-	for _, uid := range m.config.Network.UID.Deny {
+	for _, uid := range m.config.RestrictedNetworkConfig.UID.Deny {
 		key := uintToKey(uid)
 		value := uint8(0)
 		err = uids.Update(unsafe.Pointer(&key[0]), unsafe.Pointer(&value))
@@ -293,7 +293,7 @@ func (m *Manager) setAllowedGIDList() error {
 	if err != nil {
 		return err
 	}
-	for _, gid := range m.config.Network.GID.Allow {
+	for _, gid := range m.config.RestrictedNetworkConfig.GID.Allow {
 		key := uintToKey(gid)
 		value := uint8(0)
 		err = gids.Update(unsafe.Pointer(&key[0]), unsafe.Pointer(&value))
@@ -310,7 +310,7 @@ func (m *Manager) setDeniedGIDList() error {
 	if err != nil {
 		return err
 	}
-	for _, gid := range m.config.Network.GID.Deny {
+	for _, gid := range m.config.RestrictedNetworkConfig.GID.Deny {
 		key := uintToKey(gid)
 		value := uint8(0)
 		err = gids.Update(unsafe.Pointer(&key[0]), unsafe.Pointer(&value))
@@ -323,7 +323,7 @@ func (m *Manager) setDeniedGIDList() error {
 }
 
 func (m *Manager) setAllowedCIDRList() error {
-	for _, addr := range m.config.Network.CIDR.Allow {
+	for _, addr := range m.config.RestrictedNetworkConfig.CIDR.Allow {
 		allowedAddress, err := cidrToBPFMapKey(addr)
 		if err != nil {
 			return err
@@ -345,7 +345,7 @@ func (m *Manager) setAllowedCIDRList() error {
 }
 
 func (m *Manager) setDeniedCIDRList() error {
-	for _, addr := range m.config.Network.CIDR.Deny {
+	for _, addr := range m.config.RestrictedNetworkConfig.CIDR.Deny {
 		deniedAddress, err := cidrToBPFMapKey(addr)
 		if err != nil {
 			return err
@@ -367,7 +367,7 @@ func (m *Manager) setDeniedCIDRList() error {
 }
 
 func (m *Manager) setAllowedDomainList() error {
-	for _, domain := range m.config.Network.Domain.Allow {
+	for _, domain := range m.config.RestrictedNetworkConfig.Domain.Allow {
 		allowedAddresses, err := domainNameToBPFMapKey(domain, m.dnsResolver)
 		if err != nil {
 			return err
@@ -406,7 +406,7 @@ func (m *Manager) setAllowedDomainList() error {
 }
 
 func (m *Manager) setDeniedDomainList() error {
-	for _, domain := range m.config.Network.Domain.Deny {
+	for _, domain := range m.config.RestrictedNetworkConfig.Domain.Deny {
 		deniedAddresses, err := domainNameToBPFMapKey(domain, m.dnsResolver)
 		if err != nil {
 			return err

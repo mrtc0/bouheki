@@ -38,8 +38,8 @@ func Test_SetConfigMap_AllowedFiles(t *testing.T) {
 	config := config.DefaultConfig()
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			config.RestrictedFileAccess.Allow = test.allowedFiles
-			config.RestrictedFileAccess.Deny = test.deniedFiles
+			config.RestrictedFileAccessConfig.Allow = test.allowedFiles
+			config.RestrictedFileAccessConfig.Deny = test.deniedFiles
 			mgr := createManager(config)
 			defer mgr.mod.Close()
 
@@ -79,8 +79,8 @@ func Test_SetConfigMap_DeniedFiles(t *testing.T) {
 	config := config.DefaultConfig()
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			config.RestrictedFileAccess.Allow = test.allowedFiles
-			config.RestrictedFileAccess.Deny = test.deniedFiles
+			config.RestrictedFileAccessConfig.Allow = test.allowedFiles
+			config.RestrictedFileAccessConfig.Deny = test.deniedFiles
 			mgr := createManager(config)
 			defer mgr.mod.Close()
 

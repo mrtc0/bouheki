@@ -110,7 +110,7 @@ func Test_updateDNSCache_needUpdate(t *testing.T) {
 	}
 
 	testConfig := config.DefaultConfig()
-	testConfig.Network.CIDR = config.CIDRConfig{Deny: []string{cidr1, cidr2}}
+	testConfig.RestrictedNetworkConfig.CIDR = config.CIDRConfig{Deny: []string{cidr1, cidr2}}
 	mgr := createManager(testConfig, &DefaultResolver{})
 
 	for _, test := range tests {

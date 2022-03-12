@@ -20,9 +20,9 @@ func TestAudit_DenyAccess(t *testing.T) {
 	timeout := time.After(10 * time.Second)
 	done := make(chan bool)
 	conf := config.DefaultConfig()
-	conf.RestrictedFileAccess.Mode = "block"
-	conf.RestrictedFileAccess.Target = "host"
-	conf.RestrictedFileAccess.Deny = []string{be_blocked_path}
+	conf.RestrictedFileAccessConfig.Mode = "block"
+	conf.RestrictedFileAccessConfig.Target = "host"
+	conf.RestrictedFileAccessConfig.Deny = []string{be_blocked_path}
 	eventsChannel := make(chan []byte)
 	auditManager := runAuditWithOnce(conf, []string{"cat", be_blocked_path}, eventsChannel)
 	defer auditManager.manager.Stop()
@@ -63,9 +63,9 @@ func TestAudit_Container(t *testing.T) {
 	timeout := time.After(10 * time.Second)
 	done := make(chan bool)
 	conf := config.DefaultConfig()
-	conf.RestrictedFileAccess.Mode = "block"
-	conf.RestrictedFileAccess.Target = "container"
-	conf.RestrictedFileAccess.Deny = []string{be_blocked_path}
+	conf.RestrictedFileAccessConfig.Mode = "block"
+	conf.RestrictedFileAccessConfig.Target = "container"
+	conf.RestrictedFileAccessConfig.Deny = []string{be_blocked_path}
 	hostname, err := os.Hostname()
 	if err != nil {
 		t.Fatalf("can not get hostname: %s", err)
