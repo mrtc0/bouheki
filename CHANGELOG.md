@@ -2,6 +2,8 @@
 
 ## [Unreleased][unreleased]
 
+## [0.0.4] 2022-03-12
+
 ### Added
 
 #### Support for file access restrictions [#6](https://github.com/mrtc0/bouheki/pull/7)
