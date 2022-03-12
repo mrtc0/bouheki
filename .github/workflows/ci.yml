@@ -26,7 +26,6 @@ jobs:
         sudo apt-get install -y \
           wget \
           build-essential \
-          libbpf-dev \
           libelf-dev \
           clang \
           gcc-multilib \
