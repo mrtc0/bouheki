@@ -31,6 +31,12 @@ GRUB_CMDLINE_LINUX="... lsm=lockdown,yama,apparmor,bpf"
 ...
 ```
 
+Finary, run `update-grub2` .
+
+```shell
+sudo update-grub2
+```
+
 ### Linux distributions and supported kernels
 
 | Distro Name | Distro Version | Kernel Version |
