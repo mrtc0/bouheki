@@ -36,6 +36,7 @@ func NewApp(version string) *cli.App {
 		path := c.String("config")
 		conf, err := config.NewConfig(path)
 		if err != nil {
+			log.Error(err)
 			return nil
 		}
 		if !utils.AmIRootUser() {
@@ -56,9 +57,11 @@ func NewApp(version string) *cli.App {
 		return nil
 	}
 
-	err := utils.IsCompatible()
-	if err != nil {
-		log.Error(err)
+	if os.Getenv("BOUHEKI_SKIP_COMPATIBLE_CHECK") == "" {
+		err := utils.IsCompatible()
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	return app
