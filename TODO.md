@@ -6,9 +6,10 @@ This documentation is a todo list of things bouheki is planning to add or modify
 
 Currently, bouheki can only restrict network communication, but we are thinking of supporting other [LSM hook points](https://www.kernel.org/doc/html/v5.2/security/LSM.html).  
 
-## File access
+## Mount
 
-It should be possible to restrict access to the file by attaching it to `LSM/file_open`.  
+Some files(e.g. `/var/run/docker.sock`) on mounted hosts can be escaped from the container.  
+I think this can be done by hooking `lsm/sb_mount`.
 
 # Change config format
 
