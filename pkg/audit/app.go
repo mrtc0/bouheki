@@ -6,6 +6,7 @@ import (
 	"os/signal"
 
 	"github.com/mrtc0/bouheki/pkg/audit/fileaccess"
+	"github.com/mrtc0/bouheki/pkg/audit/mount"
 	"github.com/mrtc0/bouheki/pkg/audit/network"
 	"github.com/mrtc0/bouheki/pkg/config"
 	log "github.com/mrtc0/bouheki/pkg/log"
@@ -52,6 +53,7 @@ func NewApp(version string) *cli.App {
 
 		go fileaccess.RunAudit(conf)
 		go network.RunAudit(conf)
+		go mount.RunAudit(conf)
 
 		<-quit
 		return nil

@@ -23,6 +23,10 @@ type RestrictedFileAccessConfig struct {
 	Deny   []string `yaml:"deny"`
 }
 
+type RestrictedMountConfig struct {
+	DenySourcePath []string `yaml:"deny_source_path`
+}
+
 type DomainConfig struct {
 	Allow    []string `yaml:"allow"`
 	Deny     []string `yaml:"deny"`
@@ -59,6 +63,7 @@ type LogConfig struct {
 type Config struct {
 	RestrictedNetworkConfig    `yaml:"network"`
 	RestrictedFileAccessConfig `yaml:"files"`
+	RestrictedMountConfig      `yaml:"mount"`
 	Log                        LogConfig
 }
 
@@ -78,6 +83,9 @@ func DefaultConfig() *Config {
 			Target: "host",
 			Allow:  []string{"/"},
 			Deny:   []string{},
+		},
+		RestrictedMountConfig: RestrictedMountConfig{
+			DenySourcePath: []string{},
 		},
 		Log: LogConfig{
 			Format: "json",

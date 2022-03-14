@@ -36,12 +36,15 @@ bpf-restricted-network: $(BPF_BUILDDIR)/restricted-network.bpf.o
 .PHONY: bpf-restricted-file
 bpf-restricted-file: $(BPF_BUILDDIR)/restricted-file.bpf.o
 
+.PHONY: bpf-restricted-mount
+bpf-restricted-mount: $(BPF_BUILDDIR)/restricted-mount.bpf.o
+
 .PHONY: vmlinux
 vmlinux:
 	$(shell bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h)
 
 .PHONY: build
-build: bpf-restricted-network bpf-restricted-file
+build: bpf-restricted-network bpf-restricted-file bpf-restricted-mount
 	mkdir -p build
 	$(CGOFLAG) go build -ldflags '-w -s' -o build/bouheki cmd/bouheki/bouheki.go
 
@@ -51,17 +54,17 @@ build/docker:
 	sudo docker build -t ghcr.io/mrtc0/bouheki:latest .
 
 .PHONY: test/unit
-test/unit: bpf-restricted-network bpf-restricted-file
+test/unit: bpf-restricted-network bpf-restricted-file bpf-restricted-mount
 	which gotestsum || go install gotest.tools/gotestsum@latest
 	$(CGOFLAG) sudo -E gotestsum -- --mod=vendor -bench=^$$ -race ./...
 
 .PHONY: test
-test: bpf-restricted-network bpf-restricted-file
+test: bpf-restricted-network bpf-restricted-file bpf-restricted-mount
 	which gotestsum || go install gotest.tools/gotestsum@latest
 	$(CGOFLAG) sudo -E gotestsum -- --tags=integration --mod=vendor -bench=^$$ -race ./...
 
 .PHONY: test/integration/specify
-test/integration/specify: bpf-restricted-network bpf-restricted-file
+test/integration/specify: bpf-restricted-network bpf-restricted-file bpf-restricted-mount
 	which gotestsum || go install gotest.tools/gotestsum@latest
 	$(CGOFLAG) sudo -E go test -tags integration -run ${NAME} ./...
 
