@@ -101,6 +101,16 @@ type RestrictedNetworkLog struct {
 	Protocol string
 }
 
+type RestrictedFileAccessLog struct {
+	AuditEventLog
+	Path string
+}
+
+type RestrictedMountLog struct {
+	AuditEventLog
+	SourcePath string
+}
+
 func (l *RestrictedNetworkLog) Info() {
 	log.WithFields(logrus.Fields{
 		"Action":     l.Action,
@@ -125,7 +135,13 @@ func (l *RestrictedFileAccessLog) Info() {
 	}).Info("File access is trapped in th filter.")
 }
 
-type RestrictedFileAccessLog struct {
-	AuditEventLog
-	Path string
+func (l *RestrictedMountLog) Info() {
+	log.WithFields(logrus.Fields{
+		"Action":     l.Action,
+		"Hostname":   l.Hostname,
+		"PID":        l.PID,
+		"Comm":       l.Comm,
+		"ParentComm": l.ParentComm,
+		"SourcePath": l.SourcePath,
+	}).Info("Mount event is trapped in th filter.")
 }

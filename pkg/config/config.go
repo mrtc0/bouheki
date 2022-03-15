@@ -24,7 +24,7 @@ type RestrictedFileAccessConfig struct {
 }
 
 type RestrictedMountConfig struct {
-	DenySourcePath []string `yaml:"deny_source_path`
+	DenySourcePath []string `yaml:"deny"`
 }
 
 type DomainConfig struct {
