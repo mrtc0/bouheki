@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const PATH_MAX = 255
-
 func Test_SetConfigMap(t *testing.T) {
 	tests := []struct {
 		name              string
