@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	MOUNT_CONFIG = "mount_bouheki_config_map"
-	MODE_MONITOR = uint32(0)
-	MODE_BLOCK   = uint32(1)
+	MOUNT_CONFIG             = "mount_bouheki_config_map"
+	MOUNT_DENIED_SOURCE_LIST = "mount_denied_source_list"
+	MODE_MONITOR             = uint32(0)
+	MODE_BLOCK               = uint32(1)
 
 	TARGET_HOST      = uint32(0)
 	TARGET_CONTAINER = uint32(1)
@@ -60,14 +61,12 @@ func (m *Manager) Attach() error {
 }
 
 func (m *Manager) SetConfigToMap() error {
-	map_denied_source_paths, err := m.mod.GetMap("mount_denied_source_list")
+	map_denied_source_paths, err := m.mod.GetMap(MOUNT_DENIED_SOURCE_LIST)
 	if err != nil {
 		return err
 	}
 
-	// denied_source_paths := m.config.RestrictedMountConfig.DenySourcePath
-	denied_source_paths := []string{"/var/run/docker.sock"} // For test
-
+	denied_source_paths := m.config.RestrictedMountConfig.DenySourcePath
 	for i, path := range denied_source_paths {
 		key := uint8(i)
 		value := []byte(path)
