@@ -19,7 +19,7 @@ struct mount_audit_event {
     u64 cgroup;
     u32 pid;
     int ret;
-    // char nodename[NEW_UTS_LEN + 1];
+    char nodename[NEW_UTS_LEN + 1];
     char task[TASK_COMM_LEN];
     char parent_task[TASK_COMM_LEN];
     unsigned char source_path[NAME_MAX];
@@ -30,6 +30,7 @@ struct {
 	__uint(key_size, sizeof(u32));
 	__uint(value_size, sizeof(u32));
 } mount_events SEC(".maps");
+
 BPF_HASH(mount_denied_source_list, u32, struct file_path, 256);
 
 static u64 cb_check_path(struct bpf_map *map, u32 *key,
@@ -49,11 +50,21 @@ int BPF_PROG(restricted_mount, const char *dev_name, const struct path *path,
                 const char *type, unsigned long flags, void *data, int ret_prev)
 {
     int ret = -1;
+    unsigned int inum;
     struct task_struct *current_task;
     struct mount_audit_event event = {};
+    struct uts_namespace *uts_ns;
+    struct mnt_namespace *mnt_ns;
+    struct nsproxy *nsproxy;
 
     current_task = (struct task_struct *)bpf_get_current_task();
     struct task_struct *parent_task = BPF_CORE_READ(current_task, real_parent);
+
+    BPF_CORE_READ_INTO(&nsproxy, current_task, nsproxy);
+    BPF_CORE_READ_INTO(&uts_ns, nsproxy, uts_ns);
+    BPF_CORE_READ_INTO(&event.nodename, uts_ns, name.nodename);
+    BPF_CORE_READ_INTO(&mnt_ns, nsproxy, mnt_ns);
+    BPF_CORE_READ_INTO(&inum, mnt_ns, ns.inum);
 
     event.cgroup = bpf_get_current_cgroup_id();
     event.pid = (u32)(bpf_get_current_pid_tgid() >> 32);
@@ -72,5 +83,7 @@ int BPF_PROG(restricted_mount, const char *dev_name, const struct path *path,
     ret = 0;
 
 out:
+    event.ret = ret;
+    bpf_perf_event_output((void *)ctx, &mount_events, BPF_F_CURRENT_CPU, &event, sizeof(event));
     return ret;
 }
