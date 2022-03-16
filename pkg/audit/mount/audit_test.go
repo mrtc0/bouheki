@@ -18,6 +18,8 @@ func TestAudit_Mount(t *testing.T) {
 	timeout := time.After(10 * time.Second)
 	done := make(chan bool)
 	conf := config.DefaultConfig()
+	conf.RestrictedMountConfig.Target = "container"
+	conf.RestrictedMountConfig.Mode = "block"
 	conf.RestrictedMountConfig.DenySourcePath = []string{be_blocked_path}
 	eventsChannel := make(chan []byte)
 
