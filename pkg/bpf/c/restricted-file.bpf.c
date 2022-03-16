@@ -104,7 +104,7 @@ int BPF_PROG(restricted_file_open, struct file *file)
     }
 
 out:
-    // I want to call is_container(), but the stack size is too large to load the BPF program.
+    // want to call is_container(), but the stack size is too large to load the BPF program.
     // We have no choice but to write an equivalent process...
     if (config && config->target == TARGET_CONTAINER && inum == 0xF0000000) {
         return 0;

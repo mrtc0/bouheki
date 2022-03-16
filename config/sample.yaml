@@ -35,12 +35,17 @@ network:
     deny: []
       # 1000
 files:
-  mode: block
+  mode: monitor
   target: host
   allow:
     - /
   deny:
-    - /etc/passwd
+    - /proc/sysrq-trigger
+mount:
+  mode: block
+  target: host
+  deny:
+    - /var/run/docker.sock
 log:
   # Log format(json or text). Default: json
   format: json

@@ -54,7 +54,7 @@ func Test_SetConfigMap_AllowedFiles(t *testing.T) {
 				t.Fatalf("Faild to get value from eBPF map %s, err: %s", ALLOWED_FILES_MAP_NAME, err)
 			}
 
-			padding := bytes.Repeat([]byte{0x00}, PATH_MAX-len(test.allowedFiles))
+			padding := bytes.Repeat([]byte{0x00}, PATH_MAX-len(test.expected))
 			expected := append(test.expected, padding...)
 			assert.Equal(t, expected, actual)
 		})

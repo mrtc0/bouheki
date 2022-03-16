@@ -5,7 +5,6 @@
 |:------:|:----|:-----------:|
 | `mode` | Enum with the following possible values: `monitor`, `block` | If `monitor` is specified, events are only logged. If `block` is specified, network access is blocked. |
 | `target` | Enum with the following possible values: `host`, `container` | Selecting `host` applies the restriction to the host-wide. Selecting `container` will apply the restriction only to containers. |
-| `allow` | A list of allow file paths | |
 | `deny` | A list of allow file paths | |
 
 !!! warning
