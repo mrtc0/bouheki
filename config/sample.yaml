@@ -43,7 +43,7 @@ files:
     - /proc/sysrq-trigger
 mount:
   mode: block
-  target: container
+  target: host
   deny:
     - /var/run/docker.sock
 log:

@@ -44,6 +44,9 @@ nav:
     - File Access Restriction:
       - Configuration: configuration/file-access-restriction/configuration.md
       - Examples: configuration/file-access-restriction/examples.md
+    - Mount Restriction:
+      - Configuration: configuration/mount-restriction/configuration.md
+      - Examples: configuration/mount-restriction/examples.md
   - Development:
     - Setup: development/setup.md
     - Build and Test: development/build.md

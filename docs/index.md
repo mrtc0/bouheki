@@ -9,6 +9,7 @@ Security events can be audited and blocked based on the container of the process
 * Restrictions limited to containers (hosts are not restricted)
 * Network Access Control
 * File Access Control
+* Restictions bind mounts from host filesystem to containers
 
 # Demo
 
