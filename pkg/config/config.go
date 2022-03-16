@@ -24,6 +24,8 @@ type RestrictedFileAccessConfig struct {
 }
 
 type RestrictedMountConfig struct {
+	Mode           string   `yaml:"mode"`
+	Target         string   `yaml:"target"`
 	DenySourcePath []string `yaml:"deny"`
 }
 
@@ -85,6 +87,8 @@ func DefaultConfig() *Config {
 			Deny:   []string{},
 		},
 		RestrictedMountConfig: RestrictedMountConfig{
+			Mode:           "monitor",
+			Target:         "host",
 			DenySourcePath: []string{},
 		},
 		Log: LogConfig{
@@ -125,6 +129,12 @@ func (c *Config) IsRestrictedMode(target string) bool {
 		} else {
 			return false
 		}
+	case "mount":
+		if c.RestrictedMountConfig.Mode == "block" {
+			return true
+		} else {
+			return false
+		}
 	default:
 		return false
 	}
@@ -140,6 +150,12 @@ func (c *Config) IsOnlyContainer(target string) bool {
 		}
 	case "fileaccess":
 		if c.RestrictedFileAccessConfig.Target == "container" {
+			return true
+		} else {
+			return false
+		}
+	case "mount":
+		if c.RestrictedMountConfig.Target == "container" {
 			return true
 		} else {
 			return false

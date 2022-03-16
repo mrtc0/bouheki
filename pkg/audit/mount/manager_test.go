@@ -47,6 +47,45 @@ func Test_SetConfigMap(t *testing.T) {
 	}
 }
 
+func Test_setModeAndTarget(t *testing.T) {
+	tests := []struct {
+		name     string
+		mode     string
+		target   string
+		expected []byte
+	}{
+		{
+			name:     "test",
+			mode:     "block",
+			target:   "container",
+			expected: []byte{0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00},
+		},
+	}
+
+	config := config.DefaultConfig()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			config.RestrictedMountConfig.Target = test.target
+			config.RestrictedMountConfig.Mode = test.mode
+			mgr := createManager(config)
+			defer mgr.mod.Close()
+
+			configMap, err := mgr.mod.GetMap(MOUNT_CONFIG)
+			if err != nil {
+				t.Fatalf("Failed open eBPF map for %s, err: %s", MOUNT_CONFIG, err)
+			}
+
+			key := uint8(0)
+			actual, err := configMap.GetValue(unsafe.Pointer(&key))
+			if err != nil {
+				t.Fatalf("Failed to get value from eBPF map %s, err: %s", MOUNT_CONFIG, err)
+			}
+
+			assert.Equal(t, test.expected, actual)
+		})
+	}
+}
+
 func createManager(conf *config.Config) Manager {
 	mod, err := setupBPFProgram()
 	if err != nil {

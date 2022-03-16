@@ -1,6 +1,7 @@
 package mount
 
 import (
+	"encoding/binary"
 	"fmt"
 	"unsafe"
 
@@ -61,6 +62,11 @@ func (m *Manager) Attach() error {
 }
 
 func (m *Manager) SetConfigToMap() error {
+	err := m.setModeAndTarget()
+	if err != nil {
+		return err
+	}
+
 	map_denied_source_paths, err := m.mod.GetMap(MOUNT_DENIED_SOURCE_LIST)
 	if err != nil {
 		return err
@@ -74,6 +80,34 @@ func (m *Manager) SetConfigToMap() error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (m *Manager) setModeAndTarget() error {
+	key := make([]byte, 8)
+	configMap, err := m.mod.GetMap(MOUNT_CONFIG)
+	if err != nil {
+		return err
+	}
+
+	if m.config.IsRestrictedMode("mount") {
+		binary.LittleEndian.PutUint32(key[0:4], MODE_BLOCK)
+	} else {
+		binary.LittleEndian.PutUint32(key[0:4], MODE_MONITOR)
+	}
+
+	if m.config.IsOnlyContainer("mount") {
+		binary.LittleEndian.PutUint32(key[4:8], TARGET_CONTAINER)
+	} else {
+		binary.LittleEndian.PutUint32(key[4:8], TARGET_HOST)
+	}
+
+	k := uint8(0)
+	err = configMap.Update(unsafe.Pointer(&k), unsafe.Pointer(&key[0]))
+	if err != nil {
+		return err
 	}
 
 	return nil
