@@ -106,6 +106,12 @@ func TestAudit_Container(t *testing.T) {
 	}
 }
 
+func TestRunAudit_Conf(t *testing.T) {
+	config := config.DefaultConfig()
+	config.RestrictedFileAccessConfig.Enable = false
+	RunAudit(config)
+}
+
 type TestAuditManager struct {
 	manager Manager
 	cmd     *exec.Cmd

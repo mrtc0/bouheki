@@ -57,6 +57,12 @@ func TestAudit_Mount(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestRunAudit_Conf(t *testing.T) {
+	config := config.DefaultConfig()
+	config.RestrictedMountConfig.Enable = false
+	assert.Nil(t, RunAudit(config))
+}
+
 type TestAuditManager struct {
 	manager Manager
 	cmd     *exec.Cmd

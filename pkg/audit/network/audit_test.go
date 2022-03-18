@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/mrtc0/bouheki/pkg/audit/helpers"
+	"github.com/mrtc0/bouheki/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -484,6 +485,12 @@ func TestAuditContainerDoNotCaptureHostEvents(t *testing.T) {
 	}
 
 	mgr.mod.Close()
+}
+
+func TestRunAudit_Conf(t *testing.T) {
+	config := config.DefaultConfig()
+	config.RestrictedNetworkConfig.Enable = false
+	assert.Nil(t, RunAudit(config))
 }
 
 func runAuditWithOnce(configPath string, execCmd []string, eventsChannel chan []byte) TestAuditManager {

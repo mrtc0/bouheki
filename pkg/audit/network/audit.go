@@ -125,7 +125,11 @@ func UpdateDomainList(mgr Manager) {
 	}
 }
 
-func RunAudit(conf *config.Config) {
+func RunAudit(conf *config.Config) error {
+	if !conf.RestrictedNetworkConfig.Enable {
+		return nil
+	}
+
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
 
@@ -172,6 +176,8 @@ func RunAudit(conf *config.Config) {
 
 	<-quit
 	mgr.Stop()
+
+	return nil
 }
 
 func newAuditLog(header eventHeader, body detectEvent) log.RestrictedNetworkLog {

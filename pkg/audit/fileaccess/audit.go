@@ -55,7 +55,11 @@ func setupBPFProgram() (*libbpfgo.Module, error) {
 	return mod, nil
 }
 
-func RunAudit(conf *config.Config) {
+func RunAudit(conf *config.Config) error {
+	if !conf.RestrictedFileAccessConfig.Enable {
+		return nil
+	}
+
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
 
@@ -96,6 +100,8 @@ func RunAudit(conf *config.Config) {
 
 	<-quit
 	mgr.Stop()
+
+	return nil
 }
 
 func newAuditLog(event auditLog) log.RestrictedFileAccessLog {

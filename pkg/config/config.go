@@ -7,6 +7,7 @@ import (
 )
 
 type RestrictedNetworkConfig struct {
+	Enable  bool
 	Mode    string        `yaml:"mode"`
 	Target  string        `yaml:"target"`
 	Command CommandConfig `yaml:"command"`
@@ -17,6 +18,7 @@ type RestrictedNetworkConfig struct {
 }
 
 type RestrictedFileAccessConfig struct {
+	Enable bool
 	Mode   string   `yaml:"mode"`
 	Target string   `yaml:"target"`
 	Allow  []string `yaml:"allow"`
@@ -24,6 +26,7 @@ type RestrictedFileAccessConfig struct {
 }
 
 type RestrictedMountConfig struct {
+	Enable         bool
 	Mode           string   `yaml:"mode"`
 	Target         string   `yaml:"target"`
 	DenySourcePath []string `yaml:"deny"`
@@ -72,6 +75,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		RestrictedNetworkConfig: RestrictedNetworkConfig{
+			Enable:  true,
 			Mode:    "monitor",
 			Target:  "host",
 			Command: CommandConfig{Allow: []string{}, Deny: []string{}},
@@ -81,12 +85,14 @@ func DefaultConfig() *Config {
 			GID:     GIDConfig{Allow: []uint{}, Deny: []uint{}},
 		},
 		RestrictedFileAccessConfig: RestrictedFileAccessConfig{
+			Enable: true,
 			Mode:   "monitor",
 			Target: "host",
 			Allow:  []string{"/"},
 			Deny:   []string{},
 		},
 		RestrictedMountConfig: RestrictedMountConfig{
+			Enable:         true,
 			Mode:           "monitor",
 			Target:         "host",
 			DenySourcePath: []string{},
