@@ -2,6 +2,32 @@
 
 ## [Unreleased][unreleased]
 
+## [0.0.5] 2022-03-18
+
+### Added
+
+#### Support for mount restrictions [#10](https://github.com/mrtc0/bouheki/pull/10)
+
+Added new restriction for mount event. This prevents file mounts such as `/var/run/docker.sock`.
+
+```yaml
+mount:
+  mode: block
+  target: host
+  deny:
+    - /var/run/docker.sock
+```
+
+#### Added option to disable restrictions
+
+```yaml
+network:
+  enable: true
+  ...
+files:
+  enable: false # File access restrictions do not apply
+```
+
 ## [0.0.4] 2022-03-12
 
 ### Added
