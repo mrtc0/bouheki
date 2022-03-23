@@ -10,7 +10,7 @@ LIBBPF_OBJDIR = $(abspath ./$(OUTPUT)/libbpf)
 LIBBPF_DESTDIR = $(abspath ./$(OUTPUT))
 LLVM_STRIP ?= $(shell which llvm-strip || which llvm-strip-12)
 CLANG_BPF_SYS_INCLUDES := `shell $(CLANG) -v -E - </dev/null 2>&1 | sed -n '/<...> search starts here:/,/End of search list./{ s| \(/.*\)|-idirafter \1|p }'`
-CGOFLAG = CGO_ENABLED=1 CGO_CFLAGS="-I$(abspath $(OUTPUT))" CGO_LDFLAGS="-Wl,-Bstatic -Wl,-Bdynamic,-lelf,-lz $(LIBBPF_OBJ)"
+CGOFLAG = CGO_CFLAGS="-I$(abspath $(OUTPUT))" CGO_LDFLAGS="-lelf -lz $(LIBBPF_OBJ)"
 
 .PHONY: libbpf-static
 libbpf-static: $(LIBBPF_SRC) $(wildcard $(LIBBPF_SRC)/*.[ch])
@@ -46,7 +46,7 @@ vmlinux:
 .PHONY: build
 build: bpf-restricted-network bpf-restricted-file bpf-restricted-mount
 	mkdir -p build
-	$(CGOFLAG) go build -ldflags '-w -s' -o build/bouheki cmd/bouheki/bouheki.go
+	$(CGOFLAG) go build -tags netgo -ldflags '-w -s -extldflags "-static"' -o build/bouheki cmd/bouheki/bouheki.go
 
 
 .PHONY: build/docker
