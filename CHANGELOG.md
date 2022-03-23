@@ -2,6 +2,14 @@
 
 ## [Unreleased][unreleased]
 
+## [0.0.6] 2022-03-23
+
+### Fix
+
+#### Static Link
+
+bouheki's binary is now statically complaied.
+
 ## [0.0.5] 2022-03-18
 
 ### Added
