@@ -1,5 +1,6 @@
 # Current configuration options
 
+Linux Kernel >= 5.13 is required to use this option.
 
 | Config | Type | Description |
 |:------:|:----|:-----------:|
