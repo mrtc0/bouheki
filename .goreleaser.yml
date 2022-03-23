@@ -7,13 +7,14 @@ before:
     - go generate ./...
 builds:
   - env:
-      - CGO_ENABLED=1
     goos:
       - linux
     goarch:
       - amd64
+    tags:
+      - netgo
     ldflags:
-      - -w -s -X main.version={{.Version}}
+      - -w -s -extldflags "-static" -X main.version={{.Version}}
     main: ./cmd/bouheki
     binary: bouheki
 archives:

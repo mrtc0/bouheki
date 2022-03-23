@@ -70,9 +70,9 @@ test/integration/specify: bpf-restricted-network bpf-restricted-file bpf-restric
 
 .PHONY: release/local
 release/local: build build/docker
-	CGO_CFLAGS="-I$(abspath $(OUTPUT))" CGO_LDFLAGS="-Wl,-Bstatic -Wl,-Bdynamic,-lelf,-lz $(LIBBPF_OBJ)" goreleaser release --snapshot --rm-dist
+	CGO_CFLAGS="-I$(abspath $(OUTPUT))" CGO_LDFLAGS="-lelf -lz $(LIBBPF_OBJ)" goreleaser release --snapshot --rm-dist
 
 .PHONY: release
 release: build build/docker
-	CGO_CFLAGS="-I$(abspath $(OUTPUT))" CGO_LDFLAGS="-Wl,-Bstatic -Wl,-Bdynamic,-lelf,-lz $(LIBBPF_OBJ)" goreleaser release --rm-dist
+	CGO_CFLAGS="-I$(abspath $(OUTPUT))" CGO_LDFLAGS="-lelf -lz $(LIBBPF_OBJ)" goreleaser release --rm-dist
 	sudo docker push ghcr.io/mrtc0/bouheki:latest
