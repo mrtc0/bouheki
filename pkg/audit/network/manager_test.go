@@ -5,17 +5,26 @@ import (
 	"testing"
 	"unsafe"
 
+	"github.com/miekg/dns"
 	"github.com/mrtc0/bouheki/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
-type SpyDNSResolver struct{}
+type SpyDNSResolver struct {
+	config  *dns.ClientConfig
+	client  *dns.Client
+	message *dns.Msg
+}
 
-func (r *SpyDNSResolver) Resolve(host string) ([]net.IP, error) {
-	return []net.IP{
+func (r *SpyDNSResolver) Resolve(host string, recordType uint16) (DNSAnswerCache, error) {
+	answers := DNSAnswerCache{Domain: host}
+	answers.Addresses = []net.IP{
 		net.IPv4(192, 168, 1, 1),
 		net.IPv4(10, 0, 1, 1),
-	}, nil
+	}
+	answers.TTL = 1234
+
+	return answers, nil
 }
 
 func Test_cidrToBPFMapKey(t *testing.T) {
@@ -216,11 +225,16 @@ func Test_domainNameToBPFMapKey(t *testing.T) {
 	tests := []struct {
 		name       string
 		domainName string
+		addresses  []net.IP
 		expected   []IPAddress
 	}{
 		{
 			name:       "example.com",
 			domainName: "example.com",
+			addresses: []net.IP{
+				{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xc0, 0xa8, 0x1, 0x1},
+				{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xa, 0x0, 0x1, 0x1},
+			},
 			expected: []IPAddress{
 				{
 					address:  []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xc0, 0xa8, 0x1, 0x1},
@@ -237,13 +251,24 @@ func Test_domainNameToBPFMapKey(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			addrs, err := domainNameToBPFMapKey(test.domainName, &SpyDNSResolver{})
+			addrs, err := domainNameToBPFMapKey(test.domainName, test.addresses)
 			if err != nil {
 				t.Errorf("domanNameToBPFMapKey return error: %#v", err)
 			}
 			assert.Equal(t, test.expected, addrs)
 		})
 	}
+}
+
+func newSpyDNSResolver() SpyDNSResolver {
+	dnsConfig, _ := dns.ClientConfigFromFile("/etc/resolv.conf")
+	resolver := SpyDNSResolver{
+		config:  dnsConfig,
+		client:  new(dns.Client),
+		message: new(dns.Msg),
+	}
+
+	return resolver
 }
 
 func loadFixtureConfig(path string) *config.Config {

@@ -35,7 +35,7 @@ type RestrictedMountConfig struct {
 type DomainConfig struct {
 	Allow    []string `yaml:"allow"`
 	Deny     []string `yaml:"deny"`
-	Interval uint     `yaml:"interval"`
+	Interval uint     `yaml:"interval"` // deprecated
 }
 
 type CIDRConfig struct {

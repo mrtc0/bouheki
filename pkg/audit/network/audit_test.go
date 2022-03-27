@@ -175,16 +175,17 @@ func TestAuditBlockModeV4(t *testing.T) {
 
 type SpyIntegrationDNSResolver struct{}
 
-func (r *SpyIntegrationDNSResolver) Resolve(host string) ([]net.IP, error) {
+func (r *SpyIntegrationDNSResolver) Resolve(host string, recordType uint16) (DNSAnswerCache, error) {
 	// See: testdata/docker-compose.yml
+	answer := DNSAnswerCache{Domain: host, TTL: 1234}
 	switch host {
 	case "nginx-1":
-		return []net.IP{net.IPv4(10, 254, 249, 3), net.ParseIP("2001:3984:3989::3")}, nil
+		answer.Addresses = []net.IP{net.IPv4(10, 254, 249, 3), net.ParseIP("2001:3984:3989::3")}
 	case "nginx-2":
-		return []net.IP{net.IPv4(10, 254, 249, 4), net.ParseIP("2001:3984:3989::4")}, nil
+		answer.Addresses = []net.IP{net.IPv4(10, 254, 249, 4), net.ParseIP("2001:3984:3989::4")}
 	}
 
-	return []net.IP{net.IPv4(10, 254, 249, 2)}, nil
+	return answer, nil
 }
 
 func TestAuditBlockModeDomainV4(t *testing.T) {
