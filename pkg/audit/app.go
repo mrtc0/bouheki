@@ -47,6 +47,7 @@ func NewApp(version string) *cli.App {
 		log.SetFormatter(conf.Log.Format)
 		log.SetOutput(conf.Log.Output)
 		log.SetRotation(conf.Log.Output, conf.Log.MaxSize, conf.Log.MaxAge)
+		log.SetLabel(conf.Log.Labels)
 
 		quit := make(chan os.Signal)
 		signal.Notify(quit, os.Interrupt)

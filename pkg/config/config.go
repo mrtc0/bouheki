@@ -59,10 +59,11 @@ type GIDConfig struct {
 }
 
 type LogConfig struct {
-	Format  string `yaml:"format"`
-	Output  string `yaml:"output"`
-	MaxSize int    `yaml:"max_size"`
-	MaxAge  int    `yaml:"max_age"`
+	Format  string            `yaml:"format"`
+	Output  string            `yaml:"output"`
+	MaxSize int               `yaml:"max_size"`
+	MaxAge  int               `yaml:"max_age"`
+	Labels  map[string]string `yaml:"labels"`
 }
 
 type Config struct {
@@ -100,6 +101,7 @@ func DefaultConfig() *Config {
 		Log: LogConfig{
 			Format: "json",
 			Output: "stdout",
+			Labels: map[string]string{},
 		},
 	}
 }

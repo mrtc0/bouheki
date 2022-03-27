@@ -28,7 +28,7 @@ func NewLogger() *log.Entry {
 	default:
 		log.SetLevel(log.InfoLevel)
 	}
-	return log.WithFields(log.Fields{"pid": os.Getpid()})
+	return log.WithFields(log.Fields{"bouheki_pid": os.Getpid()})
 }
 
 func SetFormatter(format string) {
@@ -66,6 +66,12 @@ func SetRotation(path string, maxSize, maxAge int) {
 	})
 }
 
+func SetLabel(labels map[string]string) {
+	for k, v := range labels {
+		Logger = Logger.WithFields(log.Fields{k: v})
+	}
+}
+
 func Fatal(err error) {
 	Logger.Fatal(err)
 }
@@ -84,6 +90,10 @@ func Error(err error) {
 
 func WithFields(fields log.Fields) *log.Entry {
 	return log.WithFields(fields)
+}
+
+type LogLabels struct {
+	Labels map[string]string
 }
 
 type AuditEventLog struct {
@@ -112,7 +122,7 @@ type RestrictedMountLog struct {
 }
 
 func (l *RestrictedNetworkLog) Info() {
-	log.WithFields(logrus.Fields{
+	Logger.WithFields(logrus.Fields{
 		"Action":     l.Action,
 		"Hostname":   l.Hostname,
 		"PID":        l.PID,
@@ -125,7 +135,7 @@ func (l *RestrictedNetworkLog) Info() {
 }
 
 func (l *RestrictedFileAccessLog) Info() {
-	log.WithFields(logrus.Fields{
+	Logger.WithFields(logrus.Fields{
 		"Action":     l.Action,
 		"Hostname":   l.Hostname,
 		"PID":        l.PID,
@@ -136,7 +146,7 @@ func (l *RestrictedFileAccessLog) Info() {
 }
 
 func (l *RestrictedMountLog) Info() {
-	log.WithFields(logrus.Fields{
+	Logger.WithFields(logrus.Fields{
 		"Action":     l.Action,
 		"Hostname":   l.Hostname,
 		"PID":        l.PID,
