@@ -2,6 +2,8 @@
 
 ## [Unreleased][unreleased]
 
+## [0.0.7] 2022-03-27
+
 ### Added
 
 #### Support for labels in log
