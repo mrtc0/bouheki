@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/miekg/dns"
 	"github.com/mrtc0/bouheki/pkg/audit/helpers"
 	"github.com/mrtc0/bouheki/pkg/bpf"
 	"github.com/mrtc0/bouheki/pkg/config"
@@ -113,18 +114,6 @@ func setupBPFProgram() (*libbpfgo.Module, error) {
 	return mod, nil
 }
 
-func UpdateDomainList(mgr Manager) {
-	for {
-		time.Sleep(time.Second * time.Duration(mgr.config.RestrictedNetworkConfig.Domain.Interval))
-		if err := mgr.setAllowedDomainList(); err != nil {
-			log.Fatal(err)
-		}
-		if err := mgr.setDeniedDomainList(); err != nil {
-			log.Fatal(err)
-		}
-	}
-}
-
 func RunAudit(conf *config.Config) error {
 	if !conf.RestrictedNetworkConfig.Enable {
 		return nil
@@ -141,11 +130,20 @@ func RunAudit(conf *config.Config) error {
 
 	cache := make(map[string][]DomainCache)
 
+	dnsConfig, err := dns.ClientConfigFromFile("/etc/resolv.conf")
+	if err != nil {
+		return err
+	}
+
 	mgr := Manager{
-		mod:         mod,
-		config:      conf,
-		cache:       cache,
-		dnsResolver: &DefaultResolver{},
+		mod:    mod,
+		config: conf,
+		cache:  cache,
+		dnsResolver: &DefaultResolver{
+			config:  dnsConfig,
+			client:  new(dns.Client),
+			message: new(dns.Msg),
+		},
 	}
 
 	if err = mgr.SetConfigToMap(); err != nil {
@@ -159,7 +157,57 @@ func RunAudit(conf *config.Config) error {
 	eventsChannel := make(chan []byte)
 	mgr.Start(eventsChannel)
 
-	go UpdateDomainList(mgr)
+	for _, domain := range mgr.config.RestrictedNetworkConfig.Domain.Allow {
+		go func(domain string) {
+			for {
+				answer, err := mgr.updateAllowedDomainList(domain, dns.TypeA)
+				if err != nil {
+					time.Sleep(5 * time.Second)
+					continue
+				}
+
+				time.Sleep(time.Duration(answer.TTL) * time.Second)
+			}
+		}(domain)
+
+		go func(domain string) {
+			for {
+				answer, err := mgr.updateAllowedDomainList(domain, dns.TypeAAAA)
+				if err != nil {
+					time.Sleep(5 * time.Second)
+					continue
+				}
+
+				time.Sleep(time.Duration(answer.TTL) * time.Second)
+			}
+		}(domain)
+	}
+
+	for _, domain := range mgr.config.RestrictedNetworkConfig.Domain.Deny {
+		go func(domain string) {
+			for {
+				answer, err := mgr.updateDeniedDomainList(domain, dns.TypeA)
+				if err != nil {
+					time.Sleep(5 * time.Second)
+					continue
+				}
+
+				time.Sleep(time.Duration(answer.TTL) * time.Second)
+			}
+		}(domain)
+
+		go func(domain string) {
+			for {
+				answer, err := mgr.updateDeniedDomainList(domain, dns.TypeAAAA)
+				if err != nil {
+					time.Sleep(5 * time.Second)
+					continue
+				}
+
+				time.Sleep(time.Duration(answer.TTL) * time.Second)
+			}
+		}(domain)
+	}
 
 	go func() {
 		for {
