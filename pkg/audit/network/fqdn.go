@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/miekg/dns"
+	log "github.com/mrtc0/bouheki/pkg/log"
 )
 
 type DNSAnswerCache struct {
@@ -64,7 +65,7 @@ func (mgr *Manager) updateAllowedDomainList(domain string, queryType uint16) (DN
 	if err != nil || len(answer.Addresses) == 0 {
 		return answer, err
 	}
-	fmt.Printf("A %s is %s, TTL is %d\n", domain, answer.Addresses, answer.TTL)
+	log.Debug(fmt.Sprintf("%s(queryType=%d) is %s, TTL is %d\n", domain, queryType, answer.Addresses, answer.TTL))
 	mgr.setAllowedDomainList(domain, answer.Addresses)
 
 	return answer, nil
@@ -75,7 +76,7 @@ func (mgr *Manager) updateDeniedDomainList(domain string, queryType uint16) (DNS
 	if err != nil || len(answer.Addresses) == 0 {
 		return answer, err
 	}
-	fmt.Printf("A %s is %s, TTL is %d\n", domain, answer.Addresses, answer.TTL)
+	log.Debug(fmt.Sprintf("%s(queryType=%d) is %s, TTL is %d\n", domain, queryType, answer.Addresses, answer.TTL))
 	mgr.setDeniedDomainList(domain, answer.Addresses)
 
 	return answer, nil
