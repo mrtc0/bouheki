@@ -2,6 +2,42 @@
 
 ## [Unreleased][unreleased]
 
+### Added
+
+#### Support for labels in log
+
+Logs can contain arbitrary labels in key/value format.  
+For example:
+
+```yaml
+log:
+  labels:
+    environment: produdction
+    role: app
+```
+
+```json
+{
+  "Action": "BLOCKED",
+  "Addr": "52.219.1.53",
+  "Comm": "curl",
+  ...
+  "environment": "production",
+  "role": "app",
+  "time": "2022-03-27T13:33:17Z"
+}
+```
+
+### Fix
+
+#### TTL-based name resolution instead of periodically [#18](https://github.com/mrtc0/bouheki/pull/18)
+
+Workarounds for [#17](https://github.com/mrtc0/bouheki/issues/17).
+
+#### Context logger
+
+Log context was not set correctly.
+
 ## [0.0.6] 2022-03-23
 
 ### Fix
