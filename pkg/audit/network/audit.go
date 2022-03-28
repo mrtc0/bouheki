@@ -148,6 +148,7 @@ func RunAudit(conf *config.Config) error {
 		log.Fatal(err)
 	}
 
+	// TODO: refactor
 	for _, allowedDomain := range mgr.config.RestrictedNetworkConfig.Domain.Allow {
 		go func(domainName string) {
 			for {

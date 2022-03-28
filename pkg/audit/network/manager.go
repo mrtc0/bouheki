@@ -360,6 +360,7 @@ func (m *Manager) setDeniedCIDRList() error {
 }
 
 func (m *Manager) initDomainList() error {
+	// TODO: refactor
 	for _, domain := range m.config.RestrictedNetworkConfig.Domain.Deny {
 		answer, err := m.ResolveAddressv4(domain)
 		if err != nil {
