@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
-	"reflect"
+	"sync"
 	"unsafe"
 
 	"github.com/aquasecurity/libbpfgo"
@@ -55,13 +55,7 @@ type Manager struct {
 	mod         *libbpfgo.Module
 	config      *config.Config
 	rb          *libbpfgo.RingBuffer
-	cache       map[string][]DomainCache
 	dnsResolver DNSResolver
-}
-
-type DomainCache struct {
-	key     []byte
-	mapName string
 }
 
 type IPAddress struct {
@@ -87,13 +81,14 @@ func (i *IPAddress) ipAddressToBPFMapKey() []byte {
 }
 
 type DNSResolver interface {
-	Resolve(host string, record uint16) (DNSAnswerCache, error)
+	Resolve(host string, recordType uint16) (*DNSAnswer, error)
 }
 
 type DefaultResolver struct {
 	config  *dns.ClientConfig
 	client  *dns.Client
 	message *dns.Msg
+	mux     sync.Mutex
 }
 
 func (m *Manager) SetConfigToMap() error {
@@ -366,48 +361,70 @@ func (m *Manager) setDeniedCIDRList() error {
 
 func (m *Manager) initDomainList() error {
 	for _, domain := range m.config.RestrictedNetworkConfig.Domain.Deny {
-		m.updateDeniedDomainList(domain, dns.TypeA)
-		m.updateDeniedDomainList(domain, dns.TypeAAAA)
+		answer, err := m.ResolveAddressv4(domain)
+		if err != nil {
+			continue
+		}
+
+		err = m.setDeniedDomainList(answer)
+		if err != nil {
+			return err
+		}
+
+		answer, err = m.ResolveAddressv6(domain)
+		if err != nil {
+			continue
+		}
+
+		err = m.setDeniedDomainList(answer)
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, domain := range m.config.RestrictedNetworkConfig.Domain.Allow {
-		m.updateAllowedDomainList(domain, dns.TypeA)
-		m.updateAllowedDomainList(domain, dns.TypeAAAA)
+		answer, err := m.ResolveAddressv4(domain)
+		if err != nil {
+			fmt.Printf("%s (A) resolve failed. %s\n", domain, err)
+			continue
+		}
+
+		fmt.Printf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL)
+		err = m.setAllowedDomainList(answer)
+		if err != nil {
+			return err
+		}
+
+		answer, err = m.ResolveAddressv6(domain)
+		if err != nil {
+			fmt.Printf("%s (AAAA) resolve failed. %s\n", domain, err)
+			continue
+		}
+
+		fmt.Printf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL)
+		err = m.setAllowedDomainList(answer)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (m *Manager) setAllowedDomainList(domain string, addresses []net.IP) error {
-	allowedAddresses, err := domainNameToBPFMapKey(domain, addresses)
+func (m *Manager) setAllowedDomainList(answer *DNSAnswer) error {
+	allowedAddresses, err := domainNameToBPFMapKey(answer.Domain, answer.Addresses)
 	if err != nil {
 		return err
-	}
-
-	caches, has := m.cache[domain]
-	if has {
-		err = m.updateDNSCache(caches, allowedAddresses)
-		if err != nil {
-			return err
-		}
 	}
 
 	for _, addr := range allowedAddresses {
 		if addr.isV6address() {
-			err = m.cidrListUpdate(addr, ALLOWED_V6_CIDR_LIST_MAP_NAME)
-			if err != nil {
+			if err = m.cidrListUpdate(addr, ALLOWED_V6_CIDR_LIST_MAP_NAME); err != nil {
 				return err
-			}
-			m.cache[domain] = []DomainCache{
-				{key: addr.key, mapName: ALLOWED_V6_CIDR_LIST_MAP_NAME},
 			}
 		} else {
-			err = m.cidrListUpdate(addr, ALLOWED_V4_CIDR_LIST_MAP_NAME)
-			if err != nil {
+			if err = m.cidrListUpdate(addr, ALLOWED_V4_CIDR_LIST_MAP_NAME); err != nil {
 				return err
-			}
-			m.cache[domain] = []DomainCache{
-				{key: addr.key, mapName: ALLOWED_V4_CIDR_LIST_MAP_NAME},
 			}
 		}
 	}
@@ -415,18 +432,10 @@ func (m *Manager) setAllowedDomainList(domain string, addresses []net.IP) error 
 	return nil
 }
 
-func (m *Manager) setDeniedDomainList(domain string, addresses []net.IP) error {
-	deniedAddresses, err := domainNameToBPFMapKey(domain, addresses)
+func (m *Manager) setDeniedDomainList(answer *DNSAnswer) error {
+	deniedAddresses, err := domainNameToBPFMapKey(answer.Domain, answer.Addresses)
 	if err != nil {
 		return err
-	}
-
-	caches, has := m.cache[domain]
-	if has {
-		err = m.updateDNSCache(caches, deniedAddresses)
-		if err != nil {
-			return err
-		}
 	}
 
 	for _, addr := range deniedAddresses {
@@ -435,16 +444,10 @@ func (m *Manager) setDeniedDomainList(domain string, addresses []net.IP) error {
 			if err != nil {
 				return err
 			}
-			m.cache[domain] = []DomainCache{
-				{key: addr.key, mapName: DENIED_V6_CIDR_LIST_MAP_NAME},
-			}
 		} else {
 			err = m.cidrListUpdate(addr, DENIED_V4_CIDR_LIST_MAP_NAME)
 			if err != nil {
 				return err
-			}
-			m.cache[domain] = []DomainCache{
-				{key: addr.key, mapName: DENIED_V4_CIDR_LIST_MAP_NAME},
 			}
 		}
 	}
@@ -476,46 +479,6 @@ func (m *Manager) cidrListUpdate(addr IPAddress, mapName string) error {
 		return err
 	}
 	return nil
-}
-
-// updateDNSCache is update DNS Cache.
-//
-// If the IP address has been changed as a result of name resolution, remove the old IP address from the eBPF Map. If there are no changes, do nothing.
-func (m *Manager) updateDNSCache(caches []DomainCache, addresses []IPAddress) error {
-	oldCaches := findOldCache(caches, addresses)
-	if len(oldCaches) == 0 {
-		return nil
-	}
-
-	for _, cache := range oldCaches {
-		if err := m.cidrListDeleteKey(cache.mapName, cache.key); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// findOldCache is check the cache against the result of the new name resolution and return the (old) cache to be removed.
-//
-// If the IP in the cache is not included in the name resolution result, it will be assumed to be an old IP.
-func findOldCache(caches []DomainCache, addresses []IPAddress) []DomainCache {
-	oldCaches := []DomainCache{}
-
-	for i, cache := range caches {
-		dup := false
-		for _, addr := range addresses {
-			if reflect.DeepEqual(addr.key, cache.key) {
-				dup = true
-				break
-			}
-		}
-		if !dup {
-			oldCaches = append(oldCaches, caches[i])
-		}
-	}
-
-	return oldCaches
 }
 
 func cidrToBPFMapKey(cidr string) (IPAddress, error) {
