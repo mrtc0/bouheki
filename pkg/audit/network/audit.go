@@ -153,7 +153,7 @@ func RunAudit(conf *config.Config) error {
 			for {
 				answer, err := mgr.ResolveAddressv4(domainName)
 				if err != nil {
-					fmt.Printf("%s (A) resolve failed. %s\n", domainName, err)
+					log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domainName, err))
 					time.Sleep(5 * time.Second)
 					continue
 				}
@@ -163,7 +163,7 @@ func RunAudit(conf *config.Config) error {
 					log.Fatal(err)
 				}
 
-				fmt.Printf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL)
+				log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
 				time.Sleep(time.Duration(answer.TTL) * time.Second)
 			}
 		}(allowedDomain)
@@ -172,7 +172,7 @@ func RunAudit(conf *config.Config) error {
 			for {
 				answer, err := mgr.ResolveAddressv6(domainName)
 				if err != nil {
-					fmt.Printf("%s (AAAA) resolve failed. %s\n", domainName, err)
+					log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domainName, err))
 					time.Sleep(5 * time.Second)
 					continue
 				}
@@ -182,7 +182,7 @@ func RunAudit(conf *config.Config) error {
 					log.Fatal(err)
 				}
 
-				fmt.Printf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL)
+				log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
 				time.Sleep(time.Duration(answer.TTL) * time.Second)
 			}
 		}(allowedDomain)
