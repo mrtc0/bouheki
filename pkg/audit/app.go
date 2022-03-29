@@ -26,7 +26,7 @@ var (
 func NewApp(version string) *cli.App {
 	app := cli.NewApp()
 	app.Name = "bouheki"
-	app.Version = "0.0.7"
+	app.Version = "0.0.8"
 	app.Usage = "..."
 
 	flags := []cli.Flag{&configFlag}

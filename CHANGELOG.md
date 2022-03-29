@@ -2,6 +2,13 @@
 
 ## [Unreleased][unreleased]
 
+## [0.0.8] 2022-03-29
+
+### Fix
+
+#### Fix TTL-based DNS Resolver [#19](https://github.com/mrtc0/bouheki/pull/19)
+
+
 ## [0.0.7] 2022-03-27
 
 ### Added
