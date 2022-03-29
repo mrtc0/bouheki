@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"os"
 	"os/signal"
 	"time"
@@ -128,8 +129,6 @@ func RunAudit(conf *config.Config) error {
 	}
 	defer mod.Close()
 
-	cache := make(map[string][]DomainCache)
-
 	dnsConfig, err := dns.ClientConfigFromFile("/etc/resolv.conf")
 	if err != nil {
 		return err
@@ -138,7 +137,6 @@ func RunAudit(conf *config.Config) error {
 	mgr := Manager{
 		mod:    mod,
 		config: conf,
-		cache:  cache,
 		dnsResolver: &DefaultResolver{
 			config:  dnsConfig,
 			client:  new(dns.Client),
@@ -150,64 +148,92 @@ func RunAudit(conf *config.Config) error {
 		log.Fatal(err)
 	}
 
+	for _, allowedDomain := range mgr.config.RestrictedNetworkConfig.Domain.Allow {
+		go func(domainName string) {
+			for {
+				answer, err := mgr.ResolveAddressv4(domainName)
+				if err != nil {
+					log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domainName, err))
+					time.Sleep(5 * time.Second)
+					continue
+				}
+
+				err = mgr.updateAllowedFQDNist(answer)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+				time.Sleep(time.Duration(answer.TTL) * time.Second)
+			}
+		}(allowedDomain)
+
+		go func(domainName string) {
+			for {
+				answer, err := mgr.ResolveAddressv6(domainName)
+				if err != nil {
+					log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domainName, err))
+					time.Sleep(5 * time.Second)
+					continue
+				}
+
+				err = mgr.updateAllowedFQDNist(answer)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+				time.Sleep(time.Duration(answer.TTL) * time.Second)
+			}
+		}(allowedDomain)
+	}
+
+	for _, deniedDomain := range mgr.config.RestrictedNetworkConfig.Domain.Deny {
+		go func(domainName string) {
+			for {
+				answer, err := mgr.ResolveAddressv4(domainName)
+				if err != nil {
+					log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domainName, err))
+					time.Sleep(5 * time.Second)
+					continue
+				}
+
+				err = mgr.updateDeniedFQDNList(answer)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+				time.Sleep(time.Duration(answer.TTL) * time.Second)
+			}
+		}(deniedDomain)
+
+		go func(domainName string) {
+			for {
+				answer, err := mgr.ResolveAddressv6(domainName)
+				if err != nil {
+					log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domainName, err))
+					time.Sleep(5 * time.Second)
+					continue
+				}
+
+				err = mgr.updateDeniedFQDNList(answer)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+				time.Sleep(time.Duration(answer.TTL) * time.Second)
+			}
+		}(deniedDomain)
+	}
+
 	if err = mgr.Attach(); err != nil {
 		log.Fatal(err)
 	}
 
 	eventsChannel := make(chan []byte)
 	mgr.Start(eventsChannel)
-
-	for _, domain := range mgr.config.RestrictedNetworkConfig.Domain.Allow {
-		go func(domain string) {
-			for {
-				answer, err := mgr.updateAllowedDomainList(domain, dns.TypeA)
-				if err != nil {
-					time.Sleep(5 * time.Second)
-					continue
-				}
-
-				time.Sleep(time.Duration(answer.TTL) * time.Second)
-			}
-		}(domain)
-
-		go func(domain string) {
-			for {
-				answer, err := mgr.updateAllowedDomainList(domain, dns.TypeAAAA)
-				if err != nil {
-					time.Sleep(5 * time.Second)
-					continue
-				}
-
-				time.Sleep(time.Duration(answer.TTL) * time.Second)
-			}
-		}(domain)
-	}
-
-	for _, domain := range mgr.config.RestrictedNetworkConfig.Domain.Deny {
-		go func(domain string) {
-			for {
-				answer, err := mgr.updateDeniedDomainList(domain, dns.TypeA)
-				if err != nil {
-					time.Sleep(5 * time.Second)
-					continue
-				}
-
-				time.Sleep(time.Duration(answer.TTL) * time.Second)
-			}
-		}(domain)
-
-		go func(domain string) {
-			for {
-				answer, err := mgr.updateDeniedDomainList(domain, dns.TypeAAAA)
-				if err != nil {
-					time.Sleep(5 * time.Second)
-					continue
-				}
-
-				time.Sleep(time.Duration(answer.TTL) * time.Second)
-			}
-		}(domain)
-	}
 
 	go func() {
 		for {
