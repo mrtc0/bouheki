@@ -148,7 +148,6 @@ func RunAudit(conf *config.Config) error {
 		log.Fatal(err)
 	}
 
-	// TODO: refactor
 	for _, allowedDomain := range mgr.config.RestrictedNetworkConfig.Domain.Allow {
 		go func(domainName string) {
 			for {
@@ -159,7 +158,7 @@ func RunAudit(conf *config.Config) error {
 					continue
 				}
 
-				err = mgr.setAllowedDomainList(answer)
+				err = mgr.updateAllowedFQDNist(answer)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -178,7 +177,7 @@ func RunAudit(conf *config.Config) error {
 					continue
 				}
 
-				err = mgr.setAllowedDomainList(answer)
+				err = mgr.updateAllowedFQDNist(answer)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -194,15 +193,17 @@ func RunAudit(conf *config.Config) error {
 			for {
 				answer, err := mgr.ResolveAddressv4(domainName)
 				if err != nil {
+					log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domainName, err))
 					time.Sleep(5 * time.Second)
 					continue
 				}
 
-				err = mgr.setDeniedDomainList(answer)
+				err = mgr.updateDeniedFQDNList(answer)
 				if err != nil {
 					log.Fatal(err)
 				}
 
+				log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
 				time.Sleep(time.Duration(answer.TTL) * time.Second)
 			}
 		}(deniedDomain)
@@ -211,15 +212,17 @@ func RunAudit(conf *config.Config) error {
 			for {
 				answer, err := mgr.ResolveAddressv6(domainName)
 				if err != nil {
+					log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domainName, err))
 					time.Sleep(5 * time.Second)
 					continue
 				}
 
-				err = mgr.setDeniedDomainList(answer)
+				err = mgr.updateDeniedFQDNList(answer)
 				if err != nil {
 					log.Fatal(err)
 				}
 
+				log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
 				time.Sleep(time.Duration(answer.TTL) * time.Second)
 			}
 		}(deniedDomain)

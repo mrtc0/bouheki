@@ -360,24 +360,27 @@ func (m *Manager) setDeniedCIDRList() error {
 }
 
 func (m *Manager) initDomainList() error {
-	// TODO: refactor
 	for _, domain := range m.config.RestrictedNetworkConfig.Domain.Deny {
 		answer, err := m.ResolveAddressv4(domain)
 		if err != nil {
+			log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domain, err))
 			continue
 		}
 
-		err = m.setDeniedDomainList(answer)
+		log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+		err = m.updateDeniedFQDNList(answer)
 		if err != nil {
 			return err
 		}
 
 		answer, err = m.ResolveAddressv6(domain)
 		if err != nil {
+			log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domain, err))
 			continue
 		}
 
-		err = m.setDeniedDomainList(answer)
+		log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+		err = m.updateDeniedFQDNList(answer)
 		if err != nil {
 			return err
 		}
@@ -391,7 +394,7 @@ func (m *Manager) initDomainList() error {
 		}
 
 		log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
-		err = m.setAllowedDomainList(answer)
+		err = m.updateAllowedFQDNist(answer)
 		if err != nil {
 			return err
 		}
@@ -403,7 +406,7 @@ func (m *Manager) initDomainList() error {
 		}
 
 		log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
-		err = m.setAllowedDomainList(answer)
+		err = m.updateAllowedFQDNist(answer)
 		if err != nil {
 			return err
 		}
@@ -412,7 +415,7 @@ func (m *Manager) initDomainList() error {
 	return nil
 }
 
-func (m *Manager) setAllowedDomainList(answer *DNSAnswer) error {
+func (m *Manager) updateAllowedFQDNist(answer *DNSAnswer) error {
 	allowedAddresses, err := domainNameToBPFMapKey(answer.Domain, answer.Addresses)
 	if err != nil {
 		return err
@@ -433,7 +436,7 @@ func (m *Manager) setAllowedDomainList(answer *DNSAnswer) error {
 	return nil
 }
 
-func (m *Manager) setDeniedDomainList(answer *DNSAnswer) error {
+func (m *Manager) updateDeniedFQDNList(answer *DNSAnswer) error {
 	deniedAddresses, err := domainNameToBPFMapKey(answer.Domain, answer.Addresses)
 	if err != nil {
 		return err
