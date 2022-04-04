@@ -38,6 +38,12 @@ type DomainConfig struct {
 	Interval uint     `yaml:"interval"` // deprecated
 }
 
+type DNSProxyConfig struct {
+	Enable    bool     `yaml:"enable"`
+	Port      int      `yaml:"port"`
+	Upstreams []string `yaml:"upstream"`
+}
+
 type CIDRConfig struct {
 	Allow []string `yaml:"allow"`
 	Deny  []string `yaml:"deny"`
@@ -70,6 +76,7 @@ type Config struct {
 	RestrictedNetworkConfig    `yaml:"network"`
 	RestrictedFileAccessConfig `yaml:"files"`
 	RestrictedMountConfig      `yaml:"mount"`
+	DNSProxyConfig             `yaml:"dns_proxy"`
 	Log                        LogConfig
 }
 
@@ -97,6 +104,11 @@ func DefaultConfig() *Config {
 			Mode:           "monitor",
 			Target:         "host",
 			DenySourcePath: []string{},
+		},
+		DNSProxyConfig: DNSProxyConfig{
+			Enable:    false,
+			Port:      53,
+			Upstreams: []string{},
 		},
 		Log: LogConfig{
 			Format: "json",
