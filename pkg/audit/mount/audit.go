@@ -9,9 +9,10 @@ import (
 )
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
-	"os"
-	"os/signal"
+	"io"
+	"sync"
 
 	"github.com/mrtc0/bouheki/pkg/audit/helpers"
 	"github.com/mrtc0/bouheki/pkg/config"
@@ -53,13 +54,12 @@ func setupBPFProgram() (*libbpfgo.Module, error) {
 	return mod, nil
 }
 
-func RunAudit(conf *config.Config) error {
+func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) error {
+	defer wg.Done()
+
 	if !conf.RestrictedMountConfig.Enable {
 		return nil
 	}
-
-	quit := make(chan os.Signal)
-	signal.Notify(quit, os.Interrupt)
 
 	mod, err := setupBPFProgram()
 	if err != nil {
@@ -88,7 +88,11 @@ func RunAudit(conf *config.Config) error {
 			eventBytes := <-eventChannel
 			event, err := parseEvent(eventBytes)
 			if err != nil {
+				if err == io.EOF {
+					return
+				}
 				log.Error(err)
+				continue
 			}
 
 			auditLog := newAuditLog(event)
@@ -96,8 +100,9 @@ func RunAudit(conf *config.Config) error {
 		}
 	}()
 
-	<-quit
-	mgr.Stop()
+	<-ctx.Done()
+	mgr.Close()
+	log.Info("Terminated the mount audit.")
 
 	return nil
 }

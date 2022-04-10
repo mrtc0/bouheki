@@ -1,9 +1,11 @@
 package audit
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/signal"
+	"sync"
 
 	"github.com/mrtc0/bouheki/pkg/audit/fileaccess"
 	"github.com/mrtc0/bouheki/pkg/audit/mount"
@@ -49,14 +51,18 @@ func NewApp(version string) *cli.App {
 		log.SetRotation(conf.Log.Output, conf.Log.MaxSize, conf.Log.MaxAge)
 		log.SetLabel(conf.Log.Labels)
 
-		quit := make(chan os.Signal)
-		signal.Notify(quit, os.Interrupt)
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer cancel()
 
-		go fileaccess.RunAudit(conf)
-		go network.RunAudit(conf)
-		go mount.RunAudit(conf)
+		var wg sync.WaitGroup
+		wg.Add(3)
 
-		<-quit
+		go fileaccess.RunAudit(ctx, &wg, conf)
+		go network.RunAudit(ctx, &wg, conf)
+		go mount.RunAudit(ctx, &wg, conf)
+
+		wg.Wait()
+		log.Info("Terminate all audit.")
 		return nil
 	}
 

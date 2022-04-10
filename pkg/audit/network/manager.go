@@ -85,10 +85,11 @@ type DNSResolver interface {
 }
 
 type DefaultResolver struct {
-	config  *dns.ClientConfig
-	client  *dns.Client
-	message *dns.Msg
-	mux     sync.Mutex
+	config        *dns.ClientConfig
+	client        *dns.Client
+	message       *dns.Msg
+	mux           sync.Mutex
+	oldResolvConf []byte
 }
 
 func (m *Manager) SetConfigToMap() error {
