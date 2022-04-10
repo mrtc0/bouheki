@@ -17,65 +17,60 @@ type handler struct {
 	manager   *Manager
 }
 
+func dnsResponseToDNSAnswer(response *dns.Msg, fqdn string) *DNSAnswer {
+	dnsAnswer := DNSAnswer{Domain: fqdn}
+	for _, answer := range response.Answer {
+		switch answer.Header().Rrtype {
+		case dns.TypeA:
+			if record, ok := answer.(*dns.A); ok {
+				dnsAnswer.Addresses = append(dnsAnswer.Addresses, record.A)
+				dnsAnswer.TTL = record.Hdr.Ttl
+			}
+		case dns.TypeAAAA:
+			if record, ok := answer.(*dns.AAAA); ok {
+				dnsAnswer.Addresses = append(dnsAnswer.Addresses, record.AAAA)
+				dnsAnswer.TTL = record.Hdr.Ttl
+			}
+		}
+	}
+
+	return &dnsAnswer
+}
+
 func (this *handler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	msg := dns.Msg{}
 	msg.SetReply(r)
 
 	msg.Authoritative = true
 	for i, q := range r.Question {
-		domain := msg.Question[i].Name
-		res, err := this.resolve(domain, q.Qtype)
+		fqdn := msg.Question[i].Name
+		res, err := this.resolve(fqdn, q.Qtype)
 		if err == nil {
 			msg.Answer = append(msg.Answer, res.Answer...)
 		}
 
-		// TODO: Refactor
-		// resolv.conf から読み込んだあと、resolve.conf を動的に書き換えないといけない
-		for _, allowedFqdn := range this.manager.config.Domain.Allow {
-			dnsAnswer := DNSAnswer{Domain: domain}
-			if allowedFqdn == domain {
-				for _, answer := range res.Answer {
-					switch answer.Header().Rrtype {
-					case dns.TypeA:
-						if record, ok := answer.(*dns.A); ok {
-							dnsAnswer.Addresses = append(dnsAnswer.Addresses, record.A)
-							dnsAnswer.TTL = record.Hdr.Ttl
-						}
-					case dns.TypeAAAA:
-						if record, ok := answer.(*dns.AAAA); ok {
-							dnsAnswer.Addresses = append(dnsAnswer.Addresses, record.AAAA)
-							dnsAnswer.TTL = record.Hdr.Ttl
-						}
-					}
-				}
+		if len(res.Answer) == 0 {
+			continue
+		}
+
+		for _, allowedDomain := range this.manager.config.Domain.Allow {
+			if toFqdn(allowedDomain) == fqdn {
+				dnsAnswer := dnsResponseToDNSAnswer(res, fqdn)
 				fmt.Printf("update allowed map: %#v\n", dnsAnswer)
-				this.manager.updateAllowedFQDNist(&dnsAnswer)
+				this.manager.updateAllowedFQDNist(dnsAnswer)
+				break
 			}
 		}
 
-		for _, deniedFqdn := range this.manager.config.Domain.Deny {
-			dnsAnswer := DNSAnswer{Domain: domain}
-			if deniedFqdn+"." == domain {
-				fmt.Printf("%#v\n", res)
-				for _, answer := range res.Answer {
-					switch answer.Header().Rrtype {
-					case dns.TypeA:
-						if record, ok := answer.(*dns.A); ok {
-							dnsAnswer.Addresses = append(dnsAnswer.Addresses, record.A)
-							dnsAnswer.TTL = record.Hdr.Ttl
-						}
-					case dns.TypeAAAA:
-						if record, ok := answer.(*dns.AAAA); ok {
-							dnsAnswer.Addresses = append(dnsAnswer.Addresses, record.AAAA)
-							dnsAnswer.TTL = record.Hdr.Ttl
-						}
-					}
-				}
+		for _, deniedDomain := range this.manager.config.Domain.Deny {
+			if toFqdn(deniedDomain) == fqdn {
+				dnsAnswer := dnsResponseToDNSAnswer(res, fqdn)
 				fmt.Printf("update deny map: %#v\n", dnsAnswer)
-				this.manager.updateDeniedFQDNList(&dnsAnswer)
+				this.manager.updateDeniedFQDNList(dnsAnswer)
+				break
 			}
 		}
-		fmt.Printf("resolved %s\n", domain)
+		fmt.Printf("resolved %s (%d)\n", fqdn, q.Qtype)
 	}
 
 	w.WriteMsg(&msg)
@@ -107,24 +102,7 @@ func createDNSConfig(dnsProxyConfig config.DNSProxyConfig) (*dns.ClientConfig, e
 		return dnsConfig, err
 	}
 
-	if usingSystemdResolved(dnsConfig) {
-		dnsConfig, err := dns.ClientConfigFromFile("/run/systemd/resolve/resolv.conf")
-		if err != nil {
-			return dnsConfig, err
-		}
-	}
-
 	return dnsConfig, nil
-}
-
-func usingSystemdResolved(dnsConfig *dns.ClientConfig) bool {
-	for _, server := range dnsConfig.Servers {
-		if server == "127.0.0.53" {
-			return true
-		}
-	}
-
-	return false
 }
 
 func resolvConfFromClientConfig(dnsConfig *dns.ClientConfig) ([]byte, error) {
@@ -138,8 +116,7 @@ nameserver {{ . }}
 search {{ . }}
 {{- end }}
 
-options edns0 trust-ad
-	`
+options edns0 trust-ad`
 
 	tpl, err := template.New("").Parse(resolvConfTemplate)
 	if err != nil {

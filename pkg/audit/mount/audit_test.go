@@ -4,8 +4,12 @@
 package mount
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"os/signal"
+	"sync"
 	"testing"
 	"time"
 
@@ -60,7 +64,13 @@ func TestAudit_Mount(t *testing.T) {
 func TestRunAudit_Conf(t *testing.T) {
 	config := config.DefaultConfig()
 	config.RestrictedMountConfig.Enable = false
-	assert.Nil(t, RunAudit(config))
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	assert.Nil(t, RunAudit(ctx, &wg, config))
 }
 
 type TestAuditManager struct {
