@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"sync"
-	"time"
 
 	"github.com/miekg/dns"
 	"github.com/mrtc0/bouheki/pkg/audit/helpers"
@@ -134,7 +132,6 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 	if err != nil {
 		return err
 	}
-
 	oldResolvConf, err := ioutil.ReadFile("/etc/resolv.conf")
 	if err != nil {
 		return err
@@ -154,7 +151,7 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 		log.Fatal(err)
 	}
 
-	if mgr.config.DNSProxyConfig.Enable {
+	if mgr.config.EnableDNSProxy() {
 		go func() {
 			err := mgr.StartDNSServer()
 			if err != nil {
@@ -162,85 +159,7 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 			}
 		}()
 	} else {
-		for _, allowedDomain := range mgr.config.RestrictedNetworkConfig.Domain.Allow {
-			go func(domainName string) {
-				for {
-					answer, err := mgr.ResolveAddressv4(domainName)
-					if err != nil {
-						log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domainName, err))
-						time.Sleep(5 * time.Second)
-						continue
-					}
-
-					err = mgr.updateAllowedFQDNist(answer)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
-					time.Sleep(time.Duration(answer.TTL) * time.Second)
-				}
-			}(allowedDomain)
-
-			go func(domainName string) {
-				for {
-					answer, err := mgr.ResolveAddressv6(domainName)
-					if err != nil {
-						log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domainName, err))
-						time.Sleep(5 * time.Second)
-						continue
-					}
-
-					err = mgr.updateAllowedFQDNist(answer)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
-					time.Sleep(time.Duration(answer.TTL) * time.Second)
-				}
-			}(allowedDomain)
-		}
-
-		for _, deniedDomain := range mgr.config.RestrictedNetworkConfig.Domain.Deny {
-			go func(domainName string) {
-				for {
-					answer, err := mgr.ResolveAddressv4(domainName)
-					if err != nil {
-						log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domainName, err))
-						time.Sleep(5 * time.Second)
-						continue
-					}
-
-					err = mgr.updateDeniedFQDNList(answer)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
-					time.Sleep(time.Duration(answer.TTL) * time.Second)
-				}
-			}(deniedDomain)
-
-			go func(domainName string) {
-				for {
-					answer, err := mgr.ResolveAddressv6(domainName)
-					if err != nil {
-						log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domainName, err))
-						time.Sleep(5 * time.Second)
-						continue
-					}
-
-					err = mgr.updateDeniedFQDNList(answer)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
-					time.Sleep(time.Duration(answer.TTL) * time.Second)
-				}
-			}(deniedDomain)
-		}
+		mgr.AsyncResolve()
 	}
 
 	if err = mgr.Attach(); err != nil {

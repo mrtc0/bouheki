@@ -12,10 +12,11 @@ import (
 	log "github.com/mrtc0/bouheki/pkg/log"
 )
 
-type handler struct {
-	client    *dns.Client
-	dnsConfig *dns.ClientConfig
-	manager   *Manager
+type DNSProxy struct {
+	client             *dns.Client
+	dnsConfig          *dns.ClientConfig
+	manager            *Manager
+	originalResolvConf string
 }
 
 func dnsResponseToDNSAnswer(response *dns.Msg, fqdn string) *DNSAnswer {
@@ -38,7 +39,7 @@ func dnsResponseToDNSAnswer(response *dns.Msg, fqdn string) *DNSAnswer {
 	return &dnsAnswer
 }
 
-func (this *handler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
+func (this *DNSProxy) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	msg := dns.Msg{}
 	msg.SetReply(r)
 
@@ -76,7 +77,7 @@ func (this *handler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	w.WriteMsg(&msg)
 }
 
-func (this *handler) resolve(domainName string, queryType uint16) (*dns.Msg, error) {
+func (this *DNSProxy) resolve(domainName string, queryType uint16) (*dns.Msg, error) {
 	m := new(dns.Msg)
 	m.SetQuestion(domainName, queryType)
 	m.RecursionDesired = true
@@ -144,7 +145,7 @@ func (mgr *Manager) StartDNSServer() error {
 	}
 
 	srv := &dns.Server{Addr: ":" + strconv.Itoa(mgr.config.DNSProxyConfig.Port), Net: "udp"}
-	srv.Handler = &handler{
+	srv.Handler = &DNSProxy{
 		client:    new(dns.Client),
 		dnsConfig: dnsConfig,
 		manager:   mgr,

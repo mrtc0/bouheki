@@ -135,6 +135,10 @@ func NewConfig(configPath string) (*Config, error) {
 	return config, nil
 }
 
+func (c *Config) EnableDNSProxy() bool {
+	return c.DNSProxyConfig.Enable
+}
+
 func (c *Config) IsRestrictedMode(target string) bool {
 	switch target {
 	case "network":

@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/miekg/dns"
+	log "github.com/mrtc0/bouheki/pkg/log"
 )
 
 type DNSAnswer struct {
@@ -84,4 +86,116 @@ func (mgr *Manager) ResolveAddressv6(domain string) (*DNSAnswer, error) {
 	}
 
 	return answer, nil
+}
+
+func (mgr *Manager) resolveAndUpdateAllowedFQDNList(domainName string, recordType uint16) (uint32, error) {
+	switch recordType {
+	case dns.TypeA:
+		answer, err := mgr.ResolveAddressv4(domainName)
+		if err != nil {
+			log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domainName, err))
+			return 5, nil
+		}
+		err = mgr.updateAllowedFQDNist(answer)
+		if err != nil {
+			return 5, nil
+		}
+
+		log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+		return answer.TTL, nil
+	case dns.TypeAAAA:
+		answer, err := mgr.ResolveAddressv6(domainName)
+		if err != nil {
+			log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domainName, err))
+			return 5, nil
+		}
+		err = mgr.updateAllowedFQDNist(answer)
+		if err != nil {
+			return 5, nil
+		}
+
+		log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+		return answer.TTL, nil
+	}
+
+	return 5, errors.New("invalid record type")
+}
+
+func (mgr *Manager) resolveAndUpdateDeniedFQDNList(domainName string, recordType uint16) (uint32, error) {
+	switch recordType {
+	case dns.TypeA:
+		answer, err := mgr.ResolveAddressv4(domainName)
+		if err != nil {
+			log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domainName, err))
+			return 5, nil
+		}
+		err = mgr.updateDeniedFQDNList(answer)
+		if err != nil {
+			return 5, nil
+		}
+
+		log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+		return answer.TTL, nil
+	case dns.TypeAAAA:
+		answer, err := mgr.ResolveAddressv6(domainName)
+		if err != nil {
+			log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domainName, err))
+			return 5, nil
+		}
+		err = mgr.updateDeniedFQDNList(answer)
+		if err != nil {
+			return 5, nil
+		}
+
+		log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+		return answer.TTL, nil
+	}
+
+	return 5, errors.New("invalid record type")
+}
+
+func (mgr *Manager) AsyncResolve() {
+	for _, allowedDomain := range mgr.config.RestrictedNetworkConfig.Domain.Allow {
+		go func(domainName string) {
+			for {
+				ttl, err := mgr.resolveAndUpdateAllowedFQDNList(domainName, dns.TypeA)
+				if err != nil {
+					log.Error(err)
+				}
+				time.Sleep(time.Duration(ttl) * time.Second)
+			}
+		}(allowedDomain)
+
+		go func(domainName string) {
+			for {
+				ttl, err := mgr.resolveAndUpdateAllowedFQDNList(domainName, dns.TypeAAAA)
+				if err != nil {
+					log.Error(err)
+				}
+				time.Sleep(time.Duration(ttl) * time.Second)
+			}
+		}(allowedDomain)
+	}
+
+	for _, deniedDomain := range mgr.config.RestrictedNetworkConfig.Domain.Deny {
+		go func(domainName string) {
+			for {
+				ttl, err := mgr.resolveAndUpdateDeniedFQDNList(domainName, dns.TypeA)
+				if err != nil {
+					log.Error(err)
+				}
+				time.Sleep(time.Duration(ttl) * time.Second)
+			}
+		}(deniedDomain)
+
+		go func(domainName string) {
+			for {
+				ttl, err := mgr.resolveAndUpdateDeniedFQDNList(domainName, dns.TypeAAAA)
+				if err != nil {
+					log.Error(err)
+				}
+				time.Sleep(time.Duration(ttl) * time.Second)
+			}
+		}(deniedDomain)
+	}
 }
