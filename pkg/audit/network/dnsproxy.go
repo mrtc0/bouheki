@@ -9,6 +9,7 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/mrtc0/bouheki/pkg/config"
+	log "github.com/mrtc0/bouheki/pkg/log"
 )
 
 type handler struct {
@@ -56,7 +57,6 @@ func (this *handler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		for _, allowedDomain := range this.manager.config.Domain.Allow {
 			if toFqdn(allowedDomain) == fqdn {
 				dnsAnswer := dnsResponseToDNSAnswer(res, fqdn)
-				fmt.Printf("update allowed map: %#v\n", dnsAnswer)
 				this.manager.updateAllowedFQDNist(dnsAnswer)
 				break
 			}
@@ -65,12 +65,12 @@ func (this *handler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		for _, deniedDomain := range this.manager.config.Domain.Deny {
 			if toFqdn(deniedDomain) == fqdn {
 				dnsAnswer := dnsResponseToDNSAnswer(res, fqdn)
-				fmt.Printf("update deny map: %#v\n", dnsAnswer)
 				this.manager.updateDeniedFQDNList(dnsAnswer)
 				break
 			}
 		}
-		fmt.Printf("resolved %s (%d)\n", fqdn, q.Qtype)
+
+		log.Debug(fmt.Sprintf("Domain resolved: %s (%d)", fqdn, q.Qtype))
 	}
 
 	w.WriteMsg(&msg)
