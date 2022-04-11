@@ -46,6 +46,8 @@ mount:
   target: host
   deny:
     - /var/run/docker.sock
+dns_proxy:
+  enable: true
 log:
   # Log format(json or text). Default: json
   format: json
