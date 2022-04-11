@@ -16,6 +16,12 @@ Periodically resolves domain names and updates IP addresses in the Allow / Deny 
 If `dns_proxy` is enabled, bouheki will start DNS Proxy and modify `/etc/resolv.conf` to use it for name resolution.  
 If the domain to be name resolved is restricted, update the IP address in the Allow / Deny list.
 
+
+!!! warning
+
+    If you already have a DNS server running, you will need to stop it.  
+    For example, if you are using systemd-resolved, set `DNSStubListener=no` in `/etc/systemd/resolved.conf`.
+
 ## Current configuration options
 
 | Config | Type | Description |

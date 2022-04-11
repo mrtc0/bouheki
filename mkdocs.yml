@@ -47,6 +47,7 @@ nav:
     - Mount Restriction:
       - Configuration: configuration/mount-restriction/configuration.md
       - Examples: configuration/mount-restriction/examples.md
+    - DNS Proxy: configuration/dns_proxy.md
   - Development:
     - Setup: development/setup.md
     - Build and Test: development/build.md
