@@ -55,6 +55,7 @@ func setupBPFProgram() (*libbpfgo.Module, error) {
 }
 
 func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) error {
+	log.Info("Launching the mount audit...")
 	defer wg.Done()
 
 	if !conf.RestrictedMountConfig.Enable {
