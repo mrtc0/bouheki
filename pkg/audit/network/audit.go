@@ -156,6 +156,7 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 			err := mgr.StartDNSServer()
 			if err != nil {
 				updateResolvConf("/etc/resolv.conf", oldResolvConf)
+				log.Fatal(err)
 			}
 		}()
 	} else {
