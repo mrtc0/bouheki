@@ -85,10 +85,11 @@ type DNSResolver interface {
 }
 
 type DefaultResolver struct {
-	config  *dns.ClientConfig
-	client  *dns.Client
-	message *dns.Msg
-	mux     sync.Mutex
+	config        *dns.ClientConfig
+	client        *dns.Client
+	message       *dns.Msg
+	mux           sync.Mutex
+	oldResolvConf []byte
 }
 
 func (m *Manager) SetConfigToMap() error {
@@ -101,9 +102,13 @@ func (m *Manager) SetConfigToMap() error {
 	if err := m.setDeniedCIDRList(); err != nil {
 		return err
 	}
-	if err := m.initDomainList(); err != nil {
-		return err
+
+	if !m.config.DNSProxyConfig.Enable {
+		if err := m.initDomainList(); err != nil {
+			return err
+		}
 	}
+
 	if err := m.setAllowedCommandList(); err != nil {
 		return err
 	}

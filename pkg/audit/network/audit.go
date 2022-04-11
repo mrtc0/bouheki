@@ -2,10 +2,12 @@ package network
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
-	"os"
-	"os/signal"
+	"io"
+	"io/ioutil"
+	"sync"
 	"time"
 
 	"github.com/miekg/dns"
@@ -115,13 +117,12 @@ func setupBPFProgram() (*libbpfgo.Module, error) {
 	return mod, nil
 }
 
-func RunAudit(conf *config.Config) error {
+func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) error {
+	defer wg.Done()
+
 	if !conf.RestrictedNetworkConfig.Enable {
 		return nil
 	}
-
-	quit := make(chan os.Signal)
-	signal.Notify(quit, os.Interrupt)
 
 	mod, err := setupBPFProgram()
 	if err != nil {
@@ -130,6 +131,11 @@ func RunAudit(conf *config.Config) error {
 	defer mod.Close()
 
 	dnsConfig, err := dns.ClientConfigFromFile("/etc/resolv.conf")
+	if err != nil {
+		return err
+	}
+
+	oldResolvConf, err := ioutil.ReadFile("/etc/resolv.conf")
 	if err != nil {
 		return err
 	}
@@ -148,84 +154,93 @@ func RunAudit(conf *config.Config) error {
 		log.Fatal(err)
 	}
 
-	for _, allowedDomain := range mgr.config.RestrictedNetworkConfig.Domain.Allow {
-		go func(domainName string) {
-			for {
-				answer, err := mgr.ResolveAddressv4(domainName)
-				if err != nil {
-					log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domainName, err))
-					time.Sleep(5 * time.Second)
-					continue
-				}
-
-				err = mgr.updateAllowedFQDNist(answer)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
-				time.Sleep(time.Duration(answer.TTL) * time.Second)
+	if mgr.config.DNSProxyConfig.Enable {
+		go func() {
+			err := mgr.StartDNSServer()
+			if err != nil {
+				updateResolvConf("/etc/resolv.conf", oldResolvConf)
 			}
-		}(allowedDomain)
+		}()
+	} else {
+		for _, allowedDomain := range mgr.config.RestrictedNetworkConfig.Domain.Allow {
+			go func(domainName string) {
+				for {
+					answer, err := mgr.ResolveAddressv4(domainName)
+					if err != nil {
+						log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domainName, err))
+						time.Sleep(5 * time.Second)
+						continue
+					}
 
-		go func(domainName string) {
-			for {
-				answer, err := mgr.ResolveAddressv6(domainName)
-				if err != nil {
-					log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domainName, err))
-					time.Sleep(5 * time.Second)
-					continue
+					err = mgr.updateAllowedFQDNist(answer)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+					time.Sleep(time.Duration(answer.TTL) * time.Second)
 				}
+			}(allowedDomain)
 
-				err = mgr.updateAllowedFQDNist(answer)
-				if err != nil {
-					log.Fatal(err)
+			go func(domainName string) {
+				for {
+					answer, err := mgr.ResolveAddressv6(domainName)
+					if err != nil {
+						log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domainName, err))
+						time.Sleep(5 * time.Second)
+						continue
+					}
+
+					err = mgr.updateAllowedFQDNist(answer)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+					time.Sleep(time.Duration(answer.TTL) * time.Second)
 				}
+			}(allowedDomain)
+		}
 
-				log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
-				time.Sleep(time.Duration(answer.TTL) * time.Second)
-			}
-		}(allowedDomain)
-	}
+		for _, deniedDomain := range mgr.config.RestrictedNetworkConfig.Domain.Deny {
+			go func(domainName string) {
+				for {
+					answer, err := mgr.ResolveAddressv4(domainName)
+					if err != nil {
+						log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domainName, err))
+						time.Sleep(5 * time.Second)
+						continue
+					}
 
-	for _, deniedDomain := range mgr.config.RestrictedNetworkConfig.Domain.Deny {
-		go func(domainName string) {
-			for {
-				answer, err := mgr.ResolveAddressv4(domainName)
-				if err != nil {
-					log.Debug(fmt.Sprintf("%s (A) resolve failed. %s\n", domainName, err))
-					time.Sleep(5 * time.Second)
-					continue
+					err = mgr.updateDeniedFQDNList(answer)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+					time.Sleep(time.Duration(answer.TTL) * time.Second)
 				}
+			}(deniedDomain)
 
-				err = mgr.updateDeniedFQDNList(answer)
-				if err != nil {
-					log.Fatal(err)
+			go func(domainName string) {
+				for {
+					answer, err := mgr.ResolveAddressv6(domainName)
+					if err != nil {
+						log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domainName, err))
+						time.Sleep(5 * time.Second)
+						continue
+					}
+
+					err = mgr.updateDeniedFQDNList(answer)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
+					time.Sleep(time.Duration(answer.TTL) * time.Second)
 				}
-
-				log.Debug(fmt.Sprintf("%s (A) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
-				time.Sleep(time.Duration(answer.TTL) * time.Second)
-			}
-		}(deniedDomain)
-
-		go func(domainName string) {
-			for {
-				answer, err := mgr.ResolveAddressv6(domainName)
-				if err != nil {
-					log.Debug(fmt.Sprintf("%s (AAAA) resolve failed. %s\n", domainName, err))
-					time.Sleep(5 * time.Second)
-					continue
-				}
-
-				err = mgr.updateDeniedFQDNList(answer)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				log.Debug(fmt.Sprintf("%s (AAAA) is %#v, TTL is %d\n", answer.Domain, answer.Addresses, answer.TTL))
-				time.Sleep(time.Duration(answer.TTL) * time.Second)
-			}
-		}(deniedDomain)
+			}(deniedDomain)
+		}
 	}
 
 	if err = mgr.Attach(); err != nil {
@@ -240,7 +255,12 @@ func RunAudit(conf *config.Config) error {
 			eventBytes := <-eventsChannel
 			header, body, err := parseEvent(eventBytes)
 			if err != nil {
+				if err == io.EOF {
+					return
+				}
+
 				log.Error(err)
+				continue
 			}
 
 			auditLog := newAuditLog(header, body)
@@ -248,8 +268,10 @@ func RunAudit(conf *config.Config) error {
 		}
 	}()
 
-	<-quit
-	mgr.Stop()
+	<-ctx.Done()
+	mgr.Close()
+	updateResolvConf("/etc/resolv.conf", oldResolvConf)
+	log.Info("Terminated the network audit.")
 
 	return nil
 }

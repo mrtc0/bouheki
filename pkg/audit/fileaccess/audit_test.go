@@ -4,9 +4,12 @@
 package fileaccess
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
+	"sync"
 	"testing"
 	"time"
 
@@ -109,7 +112,13 @@ func TestAudit_Container(t *testing.T) {
 func TestRunAudit_Conf(t *testing.T) {
 	config := config.DefaultConfig()
 	config.RestrictedFileAccessConfig.Enable = false
-	RunAudit(config)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	assert.Nil(t, RunAudit(ctx, &wg, config))
 }
 
 type TestAuditManager struct {
