@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -132,7 +133,20 @@ func NewConfig(configPath string) (*Config, error) {
 		return nil, err
 	}
 
+	err = config.Validate()
+	if err != nil {
+		return nil, err
+	}
+
 	return config, nil
+}
+
+func (c *Config) Validate() error {
+	if c.DNSProxyConfig.Enable && len(c.DNSProxyConfig.Upstreams) == 0 {
+		return errors.New("One or more dns_proxy.upstrems must be specified.")
+	}
+
+	return nil
 }
 
 func (c *Config) EnableDNSProxy() bool {
