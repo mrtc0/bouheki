@@ -49,13 +49,12 @@ func (this *DNSProxy) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	for i, q := range r.Question {
 		fqdn := msg.Question[i].Name
 		res, err := this.resolve(fqdn, q.Qtype)
-		if err == nil {
-			msg.Answer = append(msg.Answer, res.Answer...)
-		}
-
-		if len(res.Answer) == 0 {
+		if err != nil {
+			log.Error(err)
 			continue
 		}
+
+		msg.Answer = append(msg.Answer, res.Answer...)
 
 		for _, allowedDomain := range this.manager.config.Domain.Allow {
 			if toFqdn(allowedDomain) == fqdn {
@@ -84,7 +83,7 @@ func (this *DNSProxy) resolve(domainName string, queryType uint16) (*dns.Msg, er
 	m.SetQuestion(domainName, queryType)
 	m.RecursionDesired = true
 
-	res, _, err := this.client.Exchange(m, this.dnsConfig.Servers[0]+":"+this.dnsConfig.Port)
+	res, _, err := this.client.Exchange(m, this.dnsConfig.Servers[0]+":"+"53")
 	if err != nil {
 		return nil, err
 	}

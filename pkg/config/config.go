@@ -41,7 +41,7 @@ type DomainConfig struct {
 type DNSProxyConfig struct {
 	Enable    bool     `yaml:"enable"`
 	Port      int      `yaml:"port"`
-	Upstreams []string `yaml:"upstream"`
+	Upstreams []string `yaml:"upstreams"`
 }
 
 type CIDRConfig struct {
