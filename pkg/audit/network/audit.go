@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"io"
-	"io/ioutil"
 	"sync"
 
 	"github.com/miekg/dns"
@@ -133,10 +132,6 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 	if err != nil {
 		return err
 	}
-	oldResolvConf, err := ioutil.ReadFile("/etc/resolv.conf")
-	if err != nil {
-		return err
-	}
 
 	mgr := Manager{
 		mod:    mod,
@@ -154,9 +149,14 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 
 	if mgr.config.EnableDNSProxy() {
 		go func() {
-			err := mgr.StartDNSServer()
+			err := mgr.StartDNSServer(hostDNSBindAddress)
 			if err != nil {
-				updateResolvConf("/etc/resolv.conf", oldResolvConf)
+				log.Fatal(err)
+			}
+		}()
+		go func() {
+			err := mgr.StartDNSServer(dockerDNSBindAddress)
+			if err != nil {
 				log.Fatal(err)
 			}
 		}()
@@ -191,7 +191,6 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 
 	<-ctx.Done()
 	mgr.Close()
-	updateResolvConf("/etc/resolv.conf", oldResolvConf)
 	log.Info("Terminated the network audit.")
 
 	return nil
