@@ -13,17 +13,22 @@ Periodically resolves domain names and updates IP addresses in the Allow / Deny 
 
 ## Change DNS Server (Recommend)
 
-If `dns_proxy` is enabled, bouheki will start DNS Proxy and modify `/etc/resolv.conf` to use it for name resolution.  
+If `dns_proxy` is enabled, bouheki will start DNS Proxy. Specify `127.0.0.1` and `172.17.0.1` (default bridge for docker) for `nameserver` in `/etc/resolv.conf`.
 If the domain to be name resolved is restricted, update the IP address in the Allow / Deny list.
 
 
 !!! warning
 
-    If you already have a DNS server running, you will need to stop it.  
-    For example, if you are using systemd-resolved, set `DNSStubListener=no` in `/etc/systemd/resolved.conf`.
+    If you are using systemd-resolved, change `/etc/systemd/resolved.conf` instead of `/etc/resolv.conf`.  
+    For example:
+
+    ```
+    DNS=127.0.0.1 172.17.0.1
+    ```
 
 ## Current configuration options
 
 | Config | Type | Description |
 |:------:|:----|:-----------:|
 | `enable` | Enum with the following possible values: `true`, `false` | Whether to enable DNS Proxy or not. Default is `false`. |
+| `upstreams` | List | Lisf of DNS Servers. |
