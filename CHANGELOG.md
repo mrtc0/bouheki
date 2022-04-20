@@ -2,6 +2,17 @@
 
 ## [Unreleased][unreleased]
 
+### Fix
+
+bouheki no longer modifies `/etc/resolv.conf`. If you use bouheki's DNS proxy server, you must manually modify `/etc/resolv.conf`.
+
+### Added
+
+#### DNS Proxy [#24](https://github.com/mrtc0/bouheki/pull/24)
+
+Listen to DNS Proxy servers to address a bug ([#17](https://github.com/mrtc0/bouheki/issues/17)) that allows bypassing the limit when the TTL reaches 0.  
+
+
 ## [0.0.8] 2022-03-29
 
 ### Fix
