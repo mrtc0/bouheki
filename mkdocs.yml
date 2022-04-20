@@ -36,6 +36,10 @@ nav:
     - Overview: getting-started/overview.md
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
+  - Use Cases:
+    - Prevent SSRF: use-cases/prevent-ssrf.md
+    - Prevent Breakout Container: use-cases/prevent-container-breakout.md
+    - Prevent Supply Chain Attacks: use-cases/prevent-supply-chain-attack-and-hardening-github-actions.md
   - Configuration:
     - Configuration: configuration/configuration.md
     - Network Restriction:
