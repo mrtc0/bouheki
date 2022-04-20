@@ -6,3 +6,4 @@ pkg/bpf/bytecode/
 build/
 .idea/
 .vscode/
+tmp/
