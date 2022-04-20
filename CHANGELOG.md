@@ -2,6 +2,8 @@
 
 ## [Unreleased][unreleased]
 
+## [0.0.8] 2022-04-20
+
 ### Fix
 
 bouheki no longer modifies `/etc/resolv.conf`. If you use bouheki's DNS proxy server, you must manually modify `/etc/resolv.conf`.
