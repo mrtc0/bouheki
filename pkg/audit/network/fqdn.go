@@ -34,13 +34,26 @@ func toFqdn(domainName string) string {
 	return domainName + "."
 }
 
+func (r *DefaultResolver) exchange(message *dns.Msg) (*dns.Msg, error) {
+	for _, server := range r.config.Servers {
+		res, _, err := r.client.Exchange(r.message, server+":53")
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		return res, err
+	}
+
+	return nil, errors.New("resolve failed")
+}
+
 func (r *DefaultResolver) Resolve(host string, recordType uint16) (*DNSAnswer, error) {
 	r.mux.Lock()
 
 	r.message.SetQuestion(toFqdn(host), recordType)
 	r.message.RecursionDesired = true
 
-	res, _, err := r.client.Exchange(r.message, r.config.Servers[0]+":"+r.config.Port)
+	res, err := r.exchange(r.message)
 	r.mux.Unlock()
 
 	if err != nil {
