@@ -107,6 +107,7 @@ type AuditEventLog struct {
 type RestrictedNetworkLog struct {
 	AuditEventLog
 	Addr     string
+	Domain   string
 	Port     uint16
 	Protocol string
 }
@@ -129,6 +130,7 @@ func (l *RestrictedNetworkLog) Info() {
 		"Comm":       l.Comm,
 		"ParentComm": l.ParentComm,
 		"Addr":       l.Addr,
+		"Domain":     l.Domain,
 		"Port":       l.Port,
 		"Protocol":   l.Protocol,
 	}).Info("Traffic is trapped in the filter.")

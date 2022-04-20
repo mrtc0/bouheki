@@ -226,6 +226,7 @@ func newAuditLog(header eventHeader, body detectEvent) log.RestrictedNetworkLog 
 	networkLog := log.RestrictedNetworkLog{
 		AuditEventLog: auditEvent,
 		Addr:          addr,
+		Domain:        dnsCache[addr],
 		Port:          port,
 		Protocol:      sockTypeToProtocolName(socktype),
 	}

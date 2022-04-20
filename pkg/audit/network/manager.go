@@ -56,6 +56,7 @@ type Manager struct {
 	config      *config.Config
 	rb          *libbpfgo.RingBuffer
 	dnsResolver DNSResolver
+	dnsCache    map[string]string
 }
 
 type IPAddress struct {
@@ -93,6 +94,8 @@ type DefaultResolver struct {
 }
 
 func (m *Manager) SetConfigToMap() error {
+	initDNSCache()
+
 	if err := m.setConfigMap(); err != nil {
 		return err
 	}
@@ -505,6 +508,8 @@ func cidrToBPFMapKey(cidr string) (IPAddress, error) {
 func domainNameToBPFMapKey(host string, addresses []net.IP) ([]IPAddress, error) {
 	var addrs = []IPAddress{}
 	for _, addr := range addresses {
+		dnsCache[addr.String()] = host
+
 		ipaddr := IPAddress{address: addr}
 		if ipaddr.isV6address() {
 			ipaddr.cidrMask = net.CIDRMask(128, 128)

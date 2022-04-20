@@ -16,6 +16,14 @@ type DNSAnswer struct {
 	TTL       uint32
 }
 
+var dnsCache map[string]string
+
+func initDNSCache() {
+	if dnsCache == nil {
+		dnsCache = make(map[string]string)
+	}
+}
+
 // To FQDN format
 // e.g. example.com -> example.com.
 func toFqdn(domainName string) string {

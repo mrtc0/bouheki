@@ -15,10 +15,9 @@ const (
 )
 
 type DNSProxy struct {
-	client             *dns.Client
-	dnsConfig          *dns.ClientConfig
-	manager            *Manager
-	originalResolvConf string
+	client    *dns.Client
+	dnsConfig *dns.ClientConfig
+	manager   *Manager
 }
 
 func dnsResponseToDNSAnswer(response *dns.Msg, fqdn string) *DNSAnswer {
@@ -72,7 +71,8 @@ func (this *DNSProxy) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 			}
 		}
 
-		log.Debug(fmt.Sprintf("Domain resolved: %s (%d)", fqdn, q.Qtype))
+		log.Debug(fmt.Sprintf("Domain resolved: %s (%d)\n", fqdn, q.Qtype))
+		log.Debug(fmt.Sprintf("Current DNS Cache: %#v\n", dnsCache))
 	}
 
 	w.WriteMsg(&msg)
