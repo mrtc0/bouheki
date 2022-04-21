@@ -40,9 +40,9 @@ type DomainConfig struct {
 }
 
 type DNSProxyConfig struct {
-	Enable    bool     `yaml:"enable"`
-	Port      int      `yaml:"port"`
-	Upstreams []string `yaml:"upstreams"`
+	Enable        bool     `yaml:"enable"`
+	Upstreams     []string `yaml:"upstreams"`
+	BindAddresses []string `yaml:"bind"`
 }
 
 type CIDRConfig struct {
@@ -107,9 +107,9 @@ func DefaultConfig() *Config {
 			DenySourcePath: []string{},
 		},
 		DNSProxyConfig: DNSProxyConfig{
-			Enable:    false,
-			Port:      53,
-			Upstreams: []string{},
+			Enable:        false,
+			Upstreams:     []string{},
+			BindAddresses: []string{"127.0.0.1", "172.17.0.1"},
 		},
 		Log: LogConfig{
 			Format: "json",

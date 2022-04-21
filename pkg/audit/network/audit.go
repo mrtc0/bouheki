@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"sync"
 
@@ -148,20 +149,15 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 	}
 
 	if mgr.config.EnableDNSProxy() {
-		go func() {
-			log.Info("Launching the DNS Proxy for Host Network...")
-			err := mgr.StartDNSServer(hostDNSBindAddress)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}()
-		go func() {
-			log.Info("Launching the DNS Proxy for Docker Network...")
-			err := mgr.StartDNSServer(dockerDNSBindAddress)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}()
+		for _, bindAddress := range mgr.config.DNSProxyConfig.BindAddresses {
+			go func(bindAddress string) {
+				log.Info(fmt.Sprintf("Launching the DNS Proxy %s...", bindAddress))
+				err := mgr.StartDNSServer(bindAddress)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}(bindAddress)
+		}
 	} else {
 		log.Info("Start async DNS Resolver...")
 		mgr.AsyncResolve()
