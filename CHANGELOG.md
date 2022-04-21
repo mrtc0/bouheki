@@ -2,7 +2,17 @@
 
 ## [Unreleased][unreleased]
 
-## [0.0.8] 2022-04-20
+## [0.0.10] 2022-04-21
+
+### Added
+
+- It is now possible to specify the address to bind the DNS Proxy Server to.
+
+### Fix
+
+- Fixed a bug where domains with blocked connections were not being logged.
+
+## [0.0.9] 2022-04-20
 
 ### Fix
 
