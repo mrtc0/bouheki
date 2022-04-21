@@ -121,6 +121,7 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 	defer wg.Done()
 
 	if !conf.RestrictedNetworkConfig.Enable {
+		log.Info("netwrok audit is disable. shutdown...")
 		return nil
 	}
 

@@ -59,6 +59,7 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 	defer wg.Done()
 
 	if !conf.RestrictedMountConfig.Enable {
+		log.Info("mount audit is disable. shutdown...")
 		return nil
 	}
 
@@ -80,6 +81,7 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 
 	mgr.Attach()
 
+	log.Info("Start the mount audit.")
 	eventChannel := make(chan []byte)
 	lostChannel := make(chan uint64)
 	mgr.Start(eventChannel, lostChannel)
