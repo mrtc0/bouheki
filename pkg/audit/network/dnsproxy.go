@@ -2,7 +2,6 @@ package network
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/miekg/dns"
 	"github.com/mrtc0/bouheki/pkg/config"
@@ -20,8 +19,8 @@ type DNSProxy struct {
 	manager   *Manager
 }
 
-func dnsResponseToDNSAnswer(response *dns.Msg, fqdn string) *DNSAnswer {
-	dnsAnswer := DNSAnswer{Domain: fqdn}
+func dnsResponseToDNSAnswer(response *dns.Msg) *DNSAnswer {
+	dnsAnswer := DNSAnswer{}
 	for _, answer := range response.Answer {
 		switch answer.Header().Rrtype {
 		case dns.TypeA:
@@ -40,6 +39,12 @@ func dnsResponseToDNSAnswer(response *dns.Msg, fqdn string) *DNSAnswer {
 	return &dnsAnswer
 }
 
+func updateDNSCache(fqdn string, dnsAnswer *DNSAnswer) {
+	for _, address := range dnsAnswer.Addresses {
+		dnsCache[address.String()] = fqdn
+	}
+}
+
 func (this *DNSProxy) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	msg := dns.Msg{}
 	msg.SetReply(r)
@@ -54,10 +59,13 @@ func (this *DNSProxy) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		}
 
 		msg.Answer = append(msg.Answer, res.Answer...)
+		dnsAnswer := dnsResponseToDNSAnswer(res)
+		dnsAnswer.Domain = fqdn
+
+		updateDNSCache(fqdn, dnsAnswer)
 
 		for _, allowedDomain := range this.manager.config.Domain.Allow {
 			if toFqdn(allowedDomain) == fqdn {
-				dnsAnswer := dnsResponseToDNSAnswer(res, fqdn)
 				this.manager.updateAllowedFQDNist(dnsAnswer)
 				break
 			}
@@ -65,7 +73,6 @@ func (this *DNSProxy) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 		for _, deniedDomain := range this.manager.config.Domain.Deny {
 			if toFqdn(deniedDomain) == fqdn {
-				dnsAnswer := dnsResponseToDNSAnswer(res, fqdn)
 				this.manager.updateDeniedFQDNList(dnsAnswer)
 				break
 			}
@@ -105,7 +112,7 @@ func (mgr *Manager) StartDNSServer(bindAddress string) error {
 		return err
 	}
 
-	srv := &dns.Server{Addr: bindAddress + ":" + strconv.Itoa(mgr.config.DNSProxyConfig.Port), Net: "udp"}
+	srv := &dns.Server{Addr: bindAddress + ":53", Net: "udp"}
 	srv.Handler = &DNSProxy{
 		client:    new(dns.Client),
 		dnsConfig: dnsConfig,
