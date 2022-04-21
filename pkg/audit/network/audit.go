@@ -149,18 +149,21 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 
 	if mgr.config.EnableDNSProxy() {
 		go func() {
+			log.Info("Launching the DNS Proxy for Host Network...")
 			err := mgr.StartDNSServer(hostDNSBindAddress)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}()
 		go func() {
+			log.Info("Launching the DNS Proxy for Docker Network...")
 			err := mgr.StartDNSServer(dockerDNSBindAddress)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}()
 	} else {
+		log.Info("Start async DNS Resolver...")
 		mgr.AsyncResolve()
 	}
 
@@ -168,6 +171,7 @@ func RunAudit(ctx context.Context, wg *sync.WaitGroup, conf *config.Config) erro
 		log.Fatal(err)
 	}
 
+	log.Info("Start the network audit.")
 	eventsChannel := make(chan []byte)
 	mgr.Start(eventsChannel)
 
