@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"net"
 	"sync"
 
 	"github.com/miekg/dns"
@@ -206,7 +207,7 @@ func newAuditLog(header eventHeader, body detectEvent) log.RestrictedNetworkLog 
 	if header.EventType == BLOCKED_IPV6 {
 		body := body.(detectEventIPv6)
 		port = body.DstPort
-		addr = byte2IPv6(body.DstIP)
+		addr = net.ParseIP(byte2IPv6(body.DstIP)).String()
 		socktype = body.SockType
 	} else {
 		body := body.(detectEventIPv4)
