@@ -2,6 +2,17 @@
 
 ## [Unreleased][unreleased]
 
+### Added
+
+#### Log Level can be set from config
+
+For example:
+
+```yaml
+log:
+  level: debug
+```
+
 ## [0.0.10] 2022-04-21
 
 ### Added
