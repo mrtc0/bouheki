@@ -2,6 +2,7 @@ package logger
 
 import (
 	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -17,8 +18,22 @@ func init() {
 }
 
 func NewLogger() *log.Entry {
-	logLevel := os.Getenv("BOUHEKI_LOG")
-	switch logLevel {
+	return log.WithFields(log.Fields{"bouheki_pid": os.Getpid()})
+}
+
+func logLevel(level string) string {
+	logLevelEnv := os.Getenv("BOUHEKI_LOG")
+	if logLevelEnv != "" {
+		return logLevelEnv
+	}
+
+	return strings.ToUpper(level)
+}
+
+func SetLevel(level string) {
+	level = logLevel(level)
+
+	switch level {
 	case "TRACE":
 		log.SetLevel(log.TraceLevel)
 	case "DEBUG":
@@ -28,7 +43,6 @@ func NewLogger() *log.Entry {
 	default:
 		log.SetLevel(log.InfoLevel)
 	}
-	return log.WithFields(log.Fields{"bouheki_pid": os.Getpid()})
 }
 
 func SetFormatter(format string) {

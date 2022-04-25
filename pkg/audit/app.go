@@ -50,6 +50,7 @@ func NewApp(version string) *cli.App {
 		log.SetOutput(conf.Log.Output)
 		log.SetRotation(conf.Log.Output, conf.Log.MaxSize, conf.Log.MaxAge)
 		log.SetLabel(conf.Log.Labels)
+		log.SetLevel(conf.Log.Level)
 
 		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer cancel()

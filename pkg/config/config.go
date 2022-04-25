@@ -66,6 +66,7 @@ type GIDConfig struct {
 }
 
 type LogConfig struct {
+	Level   string            `yaml:"level"`
 	Format  string            `yaml:"format"`
 	Output  string            `yaml:"output"`
 	MaxSize int               `yaml:"max_size"`
@@ -112,6 +113,7 @@ func DefaultConfig() *Config {
 			BindAddresses: []string{"127.0.0.1", "172.17.0.1"},
 		},
 		Log: LogConfig{
+			Level:  "INFO",
 			Format: "json",
 			Output: "stdout",
 			Labels: map[string]string{},
