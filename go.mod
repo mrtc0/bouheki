@@ -3,7 +3,7 @@ module github.com/mrtc0/bouheki
 go 1.17
 
 require (
-	github.com/aquasecurity/libbpfgo v0.2.4-libbpf-0.6.1
+	github.com/aquasecurity/libbpfgo v0.3.0-libbpf-0.8.0
 	github.com/coreos/go-semver v0.3.0
 	github.com/miekg/dns v1.1.47
 	github.com/sirupsen/logrus v1.8.1
